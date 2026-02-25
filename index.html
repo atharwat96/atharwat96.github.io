@@ -14,27 +14,39 @@
   import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy }
     from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
   
-  // ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────────
- // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyAUmxmPMbvxHdJ1WPrSxkPJIHNEBQJYAO8",
-  authDomain: "orthoassistant-71.firebaseapp.com",
-  projectId: "orthoassistant-71",
-  storageBucket: "orthoassistant-71.firebasestorage.app",
-  messagingSenderId: "1007957638145",
-  appId: "1:1007957638145:web:1ddfaf8cace0a8d1ba9400",
-  measurementId: "G-9T2T0CGDD5"
-};
+  // ── Firebase Config ───────────────────────────────────────────────
+  const firebaseConfig = {
+    apiKey: "AIzaSyAUmxmPMbvxHdJ1WPrSxkPJIHNEBQJYAO8",
+    authDomain: "orthoassistant-71.firebaseapp.com",
+    projectId: "orthoassistant-71",
+    storageBucket: "orthoassistant-71.firebasestorage.app",
+    messagingSenderId: "1007957638145",
+    appId: "1:1007957638145:web:1ddfaf8cace0a8d1ba9400",
+    measurementId: "G-9T2T0CGDD5"
+  };
   // ─────────────────────────────────────────────────────────────────
 
-  let app, auth, db, FB_READY = false;
+  let app, auth, db;
+  // FB_READY: always true when a real config is present — we validate
+  // by trying to init and catching any structural errors.
+  let FB_READY = false;
   try {
-    app  = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db   = getFirestore(app);
-    FB_READY = firebaseConfig.apiKey !== "YOUR_API_KEY";
-  } catch(e) { console.warn("Firebase not configured, running in demo mode."); }
+    app    = initializeApp(firebaseConfig);
+    auth   = getAuth(app);
+    db     = getFirestore(app);
+    // If we got here without throwing, Firebase SDK accepted the config.
+    // Do one final sanity check that projectId is not a placeholder.
+    FB_READY = typeof firebaseConfig.projectId === 'string'
+               && firebaseConfig.projectId.length > 3
+               && !firebaseConfig.projectId.includes('YOUR');
+    console.log('[OrthoAssist] Firebase SDK initialised. FB_READY =', FB_READY,
+                '| project:', firebaseConfig.projectId);
+  } catch(e) {
+    console.error('[OrthoAssist] Firebase init FAILED:', e.message);
+    FB_READY = false;
+  }
 
+  window._firebaseConfig = firebaseConfig;
   window._FB = { auth, db, FB_READY,
     signIn: signInWithEmailAndPassword,
     signOut, onAuthStateChanged, createUserWithEmailAndPassword,
@@ -594,9 +606,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text)}
       <button class="btnp" id="loginBtn"><span class="bt">Sign In</span><div class="sp"></div></button>
 
       <div class="fb-note" id="fbNote">
-        <strong>Demo Mode</strong> — Firebase not yet configured. Using local demo data.<br>
-        To enable real auth &amp; database, paste your <strong>Firebase config</strong> in the &lt;script type="module"&gt; block at the top of this file.
-        <br><br><strong>Demo credentials:</strong> any email + password "demo1234"
+        <span id="fbStatusLine">&#9203; Connecting to Firebase&hellip;</span>
       </div>
     </div>
   </div>
@@ -1018,6 +1028,36 @@ let rxRows = 0;
 // ══════════════════════════════════════
 //  LOGIN & AUTH
 // ══════════════════════════════════════
+// ── Firebase status banner (runs after module fires) ─────────────
+function updateFBBanner() {
+  const note = document.getElementById('fbNote');
+  const line = document.getElementById('fbStatusLine');
+  if (!note || !line) return;
+  const fb   = window._FB;
+  const cfg  = window._firebaseConfig || {};
+  if (fb && fb.FB_READY) {
+    note.style.borderLeftColor = 'var(--success)';
+    line.innerHTML = '<strong style="color:var(--success)">&#10003; Firebase Connected</strong>'
+      + ' &mdash; Live database &amp; auth active.'
+      + ' Project: <strong>' + (cfg.projectId || 'unknown') + '</strong>';
+  } else if (cfg.projectId && !cfg.projectId.includes('YOUR')) {
+    // Config present but FB_READY false — SDK init likely failed
+    note.style.borderLeftColor = 'var(--warning)';
+    line.innerHTML = '<strong style="color:var(--warning)">&#9888; Config found but Firebase not ready.</strong><br>'
+      + 'Check F12 Console for the error. Most likely fixes:<br>'
+      + '&nbsp;1. <strong>Authentication</strong> &rarr; enable Email/Password in Firebase console<br>'
+      + '&nbsp;2. <strong>Firestore Database</strong> &rarr; Create database (test mode)<br>'
+      + '&nbsp;3. Add <strong>localhost</strong> to Authorised Domains in Auth settings<br>'
+      + '<small style="opacity:.7">project: ' + cfg.projectId + '</small>';
+  } else {
+    note.style.borderLeftColor = 'var(--sky)';
+    line.innerHTML = '<strong>Demo Mode</strong> &mdash; Paste your Firebase config to go live.<br>'
+      + '<strong>Demo login:</strong> any email + password <strong>demo1234</strong>';
+  }
+}
+window.addEventListener('fb-ready', () => setTimeout(updateFBBanner, 150));
+setTimeout(updateFBBanner, 900); // fallback if event already fired
+
 document.getElementById('tgpass').addEventListener('click',()=>{
   const p=document.getElementById('loginPw');
   p.type=p.type==='password'?'text':'password';
