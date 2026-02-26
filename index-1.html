@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>OrthoAssist — Practice Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp }  from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword }
+    from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy }
+    from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytesResumable, getDownloadURL, listAll, deleteObject }
+    from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAUmxmPMbvxHdJ1WPrSxkPJIHNEBQJYAO8",
+    authDomain: "orthoassistant-71.firebaseapp.com",
+    projectId: "orthoassistant-71",
+    storageBucket: "orthoassistant-71.firebasestorage.app",
+    messagingSenderId: "1007957638145",
+    appId: "1:1007957638145:web:1ddfaf8cace0a8d1ba9400",
+    measurementId: "G-9T2T0CGDD5"
+  };
+
+  let app, auth, db, storage;
+  let FB_READY = false;
+  try {
+    app     = initializeApp(firebaseConfig);
+    auth    = getAuth(app);
+    db      = getFirestore(app);
+    storage = getStorage(app);
+    FB_READY = !!(firebaseConfig.projectId && !firebaseConfig.projectId.includes('YOUR'));
+    console.log('[OrthoAssist] Firebase ready:', FB_READY, '| project:', firebaseConfig.projectId);
+  } catch(e) {
+    console.error('[OrthoAssist] Firebase init error:', e.message);
+  }
+
+  window._firebaseConfig = firebaseConfig;
+  window._FB = {
+    auth, db, storage, FB_READY,
+    signIn: signInWithEmailAndPassword,
+    signOut, onAuthStateChanged, createUserWithEmailAndPassword,
+    collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc,
+    onSnapshot, serverTimestamp, query, orderBy,
+    // Storage helpers
+    ref, uploadBytesResumable, getDownloadURL, listAll, deleteObject
+  };
+  window.dispatchEvent(new Event('fb-ready'));
+</script>
+
+<style>
+:root{
+  --navy:#0a2540;--blue:#1a5fa8;--sky:#3b9eff;
+  --ice:#e8f4fd;--ice2:#f4f9ff;--white:#fff;
+  --muted:#8da4be;--muted2:#b8cfe4;--text:#1a2e42;--border:#ddeaf6;
+  --error:#d64045;--success:#2e9e6b;--warning:#e8930a;--purple:#7c4dff;
+  --sw:240px;--th:60px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text)}
+
+/* ═══════ LOGIN ═══════ */
+#loginPage{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+#loginPage::before{content:'';position:fixed;top:-30%;right:-15%;width:70vw;height:70vw;border-radius:50%;background:radial-gradient(circle,rgba(59,158,255,.12),transparent 70%);pointer-events:none}
+.grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(59,158,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,158,255,.04) 1px,transparent 1px);background-size:60px 60px;pointer-events:none}
+.lc{display:flex;width:min(900px,95vw);position:relative;z-index:1;animation:fadeUp .7s ease both}
+.ll{flex:1;background:linear-gradient(145deg,var(--blue),#0d3d7a);border-radius:20px 0 0 20px;padding:44px 36px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+.ll::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;border:1px solid rgba(255,255,255,.08)}
+.bicon{width:46px;height:46px;background:rgba(255,255,255,.12);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;border:1px solid rgba(255,255,255,.15)}
+.bicon svg{width:24px;height:24px}
+.bname{font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:600;color:#fff;letter-spacing:-.02em;line-height:1}
+.bsub{font-size:.68rem;color:rgba(255,255,255,.45);letter-spacing:.12em;text-transform:uppercase;margin-top:5px}
+.pt{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:300;color:#fff;line-height:1.3;margin-bottom:10px}
+.pd{font-size:.8rem;color:rgba(255,255,255,.5);line-height:1.7}
+.fl{list-style:none}
+.fl li{display:flex;align-items:center;gap:9px;font-size:.76rem;color:rgba(255,255,255,.6);padding:5px 0;border-top:1px solid rgba(255,255,255,.06)}
+.fl li:last-child{border-bottom:1px solid rgba(255,255,255,.06)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--sky);flex-shrink:0}
+.lr{flex:1.1;background:#fff;border-radius:0 20px 20px 0;padding:44px 40px;display:flex;flex-direction:column;justify-content:center}
+.fey{font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--sky);font-weight:500;margin-bottom:7px}
+.fti{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:600;color:var(--navy);letter-spacing:-.02em}
+.fsu{font-size:.8rem;color:var(--muted);margin-top:5px;margin-bottom:24px}
+
+/* role selector */
+.role-tabs{display:flex;gap:4px;background:var(--ice2);border-radius:9px;padding:3px;margin-bottom:22px}
+.rtab{flex:1;padding:8px 4px;border-radius:7px;font-size:.76rem;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;border:none;background:none;text-align:center}
+.rtab.active{background:#fff;color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:.73rem;font-weight:500;color:var(--navy);letter-spacing:.03em;margin-bottom:5px}
+.iw{position:relative}
+.iw>svg:first-child{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--muted);pointer-events:none}
+.iw input{width:100%;padding:12px 13px 12px 40px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.86rem;color:var(--navy);background:var(--ice2);outline:none;transition:border-color .2s,background .2s,box-shadow .2s}
+.iw input:focus{border-color:var(--sky);background:#fff;box-shadow:0 0 0 4px rgba(59,158,255,.1)}
+.tgp{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);display:flex;align-items:center}
+.tgp svg{width:15px;height:15px}
+.errmsg{display:none;align-items:center;gap:7px;background:#fff0f0;border:1px solid #f7c5c5;border-radius:8px;padding:9px 13px;font-size:.76rem;color:var(--error);margin-bottom:14px}
+.errmsg.show{display:flex}
+.errmsg svg{width:14px;height:14px;flex-shrink:0}
+.btnp{width:100%;padding:13px;background:linear-gradient(135deg,var(--blue),#0d3d7a);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:500;cursor:pointer;box-shadow:0 4px 20px rgba(26,95,168,.35);transition:transform .15s}
+.btnp:hover{transform:translateY(-1px)}
+.btnp:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.btnp .sp{display:none;width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin:0 auto}
+.btnp.loading .bt{display:none}
+.btnp.loading .sp{display:block}
+.fb-note{margin-top:18px;padding:12px 14px;background:var(--ice2);border-radius:9px;font-size:.74rem;color:var(--muted);border-left:3px solid var(--sky);line-height:1.6}
+.fb-note strong{color:var(--blue)}
+
+/* ═══════ APP SHELL ═══════ */
+#appShell{display:none;height:100vh;background:var(--ice2)}
+#appShell.show{display:flex}
+
+/* ═══════ SIDEBAR ═══════ */
+.sidebar{width:var(--sw);background:var(--navy);height:100vh;display:flex;flex-direction:column;flex-shrink:0;position:relative;z-index:50;transition:transform .3s ease}
+.sov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49;backdrop-filter:blur(2px)}
+.slogo{padding:22px 18px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
+.slogo .bicon{width:32px;height:32px;border-radius:8px;margin-bottom:12px}
+.slogo .bicon svg{width:17px;height:17px}
+.slogo .bname{font-size:1.2rem}
+.slogo .bsub{font-size:.6rem}
+.snav{flex:1;padding:12px 8px;overflow-y:auto}
+.nsl{font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.28);padding:10px 10px 4px}
+.ni{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;font-size:.79rem;color:rgba(255,255,255,.5);cursor:pointer;margin-bottom:1px;transition:background .15s,color .15s;user-select:none}
+.ni svg{width:15px;height:15px;flex-shrink:0}
+.ni:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.8)}
+.ni.active{background:rgba(59,158,255,.15);color:var(--sky)}
+.ni .nb{margin-left:auto;background:var(--sky);color:#fff;font-size:.6rem;padding:1px 6px;border-radius:20px}
+.ni.disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+.susr{padding:12px 14px 16px;border-top:1px solid rgba(255,255,255,.06)}
+.ucard{display:flex;align-items:center;gap:9px}
+.uavt{width:32px;height:32px;background:linear-gradient(135deg,var(--blue),var(--sky));border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:.9rem;font-weight:600;color:#fff;flex-shrink:0}
+.uname{font-size:.78rem;font-weight:500;color:rgba(255,255,255,.82)}
+.urole{font-size:.65rem;color:rgba(255,255,255,.32)}
+.rbadge{font-size:.58rem;padding:1px 7px;border-radius:10px;margin-top:2px;display:inline-block}
+.rbadge.doctor{background:rgba(59,158,255,.2);color:var(--sky)}
+.rbadge.receptionist{background:rgba(46,158,107,.2);color:#4ecf8e}
+.rbadge.admin{background:rgba(232,147,10,.2);color:#f5b43e}
+.lbtn{margin-left:auto;background:none;border:none;cursor:pointer;color:rgba(255,255,255,.28);transition:color .15s}
+.lbtn:hover{color:rgba(255,255,255,.7)}
+.lbtn svg{width:14px;height:14px}
+
+/* ═══════ MAIN ═══════ */
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{background:#fff;padding:0 18px;height:var(--th);display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.ham{display:none;background:none;border:1.5px solid var(--border);border-radius:8px;width:32px;height:32px;cursor:pointer;align-items:center;justify-content:center;color:var(--muted);flex-shrink:0}
+.ham svg{width:15px;height:15px}
+.tbt{font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:600;color:var(--navy)}
+.tbd{font-size:.7rem;color:var(--muted)}
+.tbsp{flex:1}
+.tbsrch{display:flex;align-items:center;gap:7px;background:var(--ice2);border:1.5px solid var(--border);border-radius:8px;padding:6px 11px;width:190px}
+.tbsrch svg{width:13px;height:13px;color:var(--muted);flex-shrink:0}
+.tbsrch input{border:none;outline:none;background:none;font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--text);width:100%}
+.tbbtn{width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:border-color .15s,color .15s;position:relative;flex-shrink:0}
+.tbbtn:hover{border-color:var(--sky);color:var(--sky)}
+.tbbtn svg{width:14px;height:14px}
+.ndot::after{content:'';position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--sky);border:2px solid #fff}
+.ca{flex:1;overflow-y:auto;padding:18px}
+.page{display:none;animation:fadeUp .3s ease}
+.page.active{display:block}
+
+/* ═══════ SHARED COMPONENTS ═══════ */
+.card{background:#fff;border-radius:13px;border:1px solid var(--border);overflow:hidden}
+.card-hd{padding:15px 18px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.card-ti{font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;color:var(--navy)}
+.card-ac{font-size:.72rem;color:var(--sky);cursor:pointer;font-weight:500}
+.card-bd{padding:14px 18px}
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap}
+.phead{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;color:var(--navy)}
+.psub{font-size:.75rem;color:var(--muted);margin-top:2px}
+.btn-add{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--blue),#0d3d7a);color:#fff;border:none;border-radius:9px;padding:9px 15px;font-family:'DM Sans',sans-serif;font-size:.79rem;font-weight:500;cursor:pointer;box-shadow:0 4px 14px rgba(26,95,168,.3);transition:transform .15s;white-space:nowrap}
+.btn-add:hover{transform:translateY(-1px)}
+.btn-add svg{width:13px;height:13px}
+.exp-btn{display:flex;align-items:center;gap:5px;padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.75rem;cursor:pointer;transition:all .15s;white-space:nowrap}
+.exp-btn:hover{border-color:var(--blue);color:var(--blue)}
+.exp-btn svg{width:13px;height:13px}
+.sb{font-size:.64rem;font-weight:500;padding:3px 8px;border-radius:20px;flex-shrink:0}
+.s-confirmed{background:rgba(46,158,107,.1);color:#2e9e6b}
+.s-pending{background:rgba(232,147,10,.1);color:#e8930a}
+.s-cancelled{background:rgba(214,64,69,.1);color:#d64045}
+.s-paid{background:rgba(46,158,107,.1);color:#2e9e6b}
+.s-unpaid{background:rgba(214,64,69,.1);color:#d64045}
+.s-partial{background:rgba(232,147,10,.1);color:#e8930a}
+
+/* form fields */
+.mf{margin-bottom:14px}
+.mf label{display:block;font-size:.71rem;font-weight:500;color:var(--navy);margin-bottom:5px}
+.mf input,.mf select,.mf textarea{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.81rem;color:var(--text);background:var(--ice2);outline:none;transition:border-color .2s,box-shadow .2s}
+.mf input:focus,.mf select:focus,.mf textarea:focus{border-color:var(--sky);background:#fff;box-shadow:0 0 0 3px rgba(59,158,255,.1)}
+.mf textarea{resize:vertical;min-height:80px}
+.mrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn-cancel{padding:9px 18px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.81rem;cursor:pointer;transition:all .15s}
+.btn-cancel:hover{border-color:var(--error);color:var(--error)}
+.btn-save{padding:9px 20px;background:linear-gradient(135deg,var(--blue),#0d3d7a);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.81rem;font-weight:500;cursor:pointer;box-shadow:0 3px 12px rgba(26,95,168,.3);transition:transform .15s}
+.btn-save:hover{transform:translateY(-1px)}
+.btn-danger{padding:9px 18px;background:rgba(214,64,69,.1);color:var(--error);border:1.5px solid rgba(214,64,69,.2);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.81rem;cursor:pointer;transition:all .15s}
+.btn-danger:hover{background:var(--error);color:#fff}
+
+/* ═══════ DASHBOARD ═══════ */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.sc{background:#fff;border-radius:12px;padding:16px;border:1px solid var(--border);position:relative;overflow:hidden;cursor:default;transition:transform .15s,box-shadow .15s}
+.sc:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(26,95,168,.1)}
+.sc::after{content:'';position:absolute;top:0;left:0;height:3px;width:100%}
+.sc.bl::after{background:linear-gradient(90deg,var(--blue),var(--sky))}
+.sc.gr::after{background:linear-gradient(90deg,#2e9e6b,#43c98b)}
+.sc.or::after{background:linear-gradient(90deg,#e8930a,#f5b43e)}
+.sc.pu::after{background:linear-gradient(90deg,#7c4dff,#b388ff)}
+.si{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.si svg{width:16px;height:16px}
+.si.bl{background:rgba(59,158,255,.12);color:var(--blue)}
+.si.gr{background:rgba(46,158,107,.12);color:#2e9e6b}
+.si.or{background:rgba(232,147,10,.12);color:#e8930a}
+.si.pu{background:rgba(124,77,255,.12);color:#7c4dff}
+.sv{font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:600;color:var(--navy);line-height:1;margin-bottom:2px}
+.sl{font-size:.72rem;color:var(--muted)}
+.str{font-size:.68rem;color:var(--success);margin-top:5px}
+.dash-grid{display:grid;grid-template-columns:1fr 320px;gap:14px}
+.al{list-style:none}
+.ai-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.ai-item:last-child{border-bottom:none}
+.at{font-size:.7rem;color:var(--muted);width:46px;flex-shrink:0;font-weight:500}
+.aa{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--sky));display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:.8rem;color:#fff;font-weight:600;flex-shrink:0}
+.ain{flex:1;min-width:0}
+.an{font-size:.8rem;font-weight:500;color:var(--text)}
+.ar{font-size:.7rem;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acl{list-style:none}
+.aci{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.aci:last-child{border-bottom:none}
+.acd{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.acd.bl{background:var(--sky)} .acd.gr{background:var(--success)} .acd.or{background:var(--warning)}
+.act{font-size:.77rem;color:var(--text);line-height:1.5}
+.act span{font-weight:500;color:var(--navy)}
+.actime{font-size:.67rem;color:var(--muted);margin-top:1px}
+.sgi{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.sgi:last-child{border-bottom:none}
+.sgd{text-align:center;width:36px;flex-shrink:0}
+.sgdd{font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:600;color:var(--blue);line-height:1}
+.sgdm{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+
+/* ═══════ PATIENTS ═══════ */
+.fbar{display:flex;align-items:center;gap:7px;margin-bottom:14px;flex-wrap:wrap}
+.fsearch{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;flex:1;min-width:160px;max-width:280px}
+.fsearch svg{width:13px;height:13px;color:var(--muted);flex-shrink:0}
+.fsearch input{border:none;outline:none;background:none;font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--text);width:100%}
+.fbtn{padding:7px 12px;border-radius:8px;font-size:.75rem;font-weight:500;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap}
+.fbtn.active{border-color:var(--sky);background:rgba(59,158,255,.08);color:var(--blue)}
+.pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px}
+.pcard{background:#fff;border-radius:12px;border:1px solid var(--border);padding:16px;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s}
+.pcard:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(26,95,168,.1);border-color:rgba(59,158,255,.3)}
+.pct{display:flex;align-items:flex-start;gap:10px;margin-bottom:11px}
+.pav{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:.95rem;font-weight:600;color:#fff;flex-shrink:0}
+.pav.c1{background:linear-gradient(135deg,#1a5fa8,#3b9eff)}
+.pav.c2{background:linear-gradient(135deg,#2e9e6b,#43c98b)}
+.pav.c3{background:linear-gradient(135deg,#7c4dff,#b388ff)}
+.pav.c4{background:linear-gradient(135deg,#e8930a,#f5c842)}
+.pav.c5{background:linear-gradient(135deg,#d64045,#f07277)}
+.pname{font-size:.9rem;font-weight:500;color:var(--navy)}
+.pmeta{font-size:.7rem;color:var(--muted);margin-top:1px}
+.pid{font-size:.66rem;color:var(--muted2);margin-top:1px;font-family:monospace;letter-spacing:.04em}
+.pdiag{background:var(--ice2);border-radius:7px;padding:7px 10px;font-size:.74rem;color:var(--text);margin-bottom:10px;border-left:3px solid var(--blue)}
+.pdl{font-size:.63rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:1px}
+.pcf{display:flex;align-items:center;justify-content:space-between}
+.pvs{font-size:.7rem;color:var(--muted)}
+.pvs span{color:var(--navy);font-weight:500}
+.pbtn{font-size:.7rem;color:var(--sky);font-weight:500;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;padding:0}
+.pbtn:hover{text-decoration:underline}
+
+/* ═══════ PATIENT DETAIL ═══════ */
+.overlay{position:fixed;inset:0;background:rgba(10,37,64,.5);backdrop-filter:blur(4px);z-index:200;display:none;align-items:stretch;justify-content:flex-end}
+.overlay.show{display:flex;animation:fadeIn .2s ease}
+.dpanel{width:min(560px,100vw);height:100vh;background:#fff;overflow-y:auto;display:flex;flex-direction:column;animation:slideLeft .3s ease}
+.dph{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:10;gap:8px}
+.dtabs{display:flex;gap:3px;background:var(--ice2);border-radius:8px;padding:3px;overflow-x:auto}
+.dtab{padding:6px 12px;border-radius:6px;font-size:.73rem;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;border:none;background:none;white-space:nowrap}
+.dtab.active{background:#fff;color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.dclose{width:30px;height:30px;border-radius:7px;border:1.5px solid var(--border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .15s;flex-shrink:0}
+.dclose:hover{border-color:var(--error);color:var(--error)}
+.dclose svg{width:13px;height:13px}
+.dpb{flex:1;padding:18px 20px}
+.dp-tab{display:none}
+.dp-tab.active{display:block}
+.ds{margin-bottom:18px}
+.dst{font-size:.63rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:500;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+.dst::after{content:'';flex:1;height:1px;background:var(--border)}
+.dgr{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.df label{font-size:.66rem;color:var(--muted);margin-bottom:1px;display:block}
+.df p{font-size:.8rem;color:var(--text)}
+.df p.hi{color:var(--navy);font-weight:500}
+.vi{padding:8px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start}
+.vi:last-child{border-bottom:none}
+.vdb{background:var(--ice2);border-radius:7px;padding:4px 8px;text-align:center;flex-shrink:0;min-width:44px}
+.vdb .vd{font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:600;color:var(--blue)}
+.vdb .vm{font-size:.6rem;color:var(--muted);text-transform:uppercase}
+.vi-type{font-size:.78rem;font-weight:500;color:var(--text)}
+.vi-note{font-size:.71rem;color:var(--muted);margin-top:1px}
+/* notes */
+.note-item{background:var(--ice2);border-radius:9px;padding:12px;border:1px solid var(--border);margin-bottom:10px}
+.nitem-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.nitem-date{font-size:.68rem;color:var(--muted)}
+.nitem-type{font-size:.68rem;color:var(--blue);font-weight:500;background:rgba(59,158,255,.1);padding:2px 7px;border-radius:20px}
+.nitem-text{font-size:.79rem;color:var(--text);line-height:1.6}
+/* imaging */
+.img-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+.img-ph{background:linear-gradient(135deg,#0d2f4f,#1a5fa8);border-radius:9px;aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;gap:6px}
+.img-ph svg{width:28px;height:28px;color:rgba(255,255,255,.4)}
+.img-ph span{font-size:.65rem;color:rgba(255,255,255,.5)}
+.img-ph-info{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(10,37,64,.8));padding:7px 9px}
+.img-ph-label{font-size:.66rem;color:#fff;font-weight:500}
+.img-ph-date{font-size:.6rem;color:rgba(255,255,255,.6)}
+.img-upload-btn{display:flex;align-items:center;gap:6px;background:var(--ice2);border:1.5px dashed var(--border);border-radius:8px;padding:9px 14px;font-size:.77rem;color:var(--muted);cursor:pointer;width:100%;justify-content:center;transition:all .2s}
+.img-upload-btn:hover{border-color:var(--sky);color:var(--blue)}
+.img-upload-btn svg{width:14px;height:14px}
+/* Upload progress */
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:12px;position:relative}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--sky);background:rgba(59,158,255,.04)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-zone svg{width:28px;height:28px;color:var(--muted);margin-bottom:6px}
+.upload-zone p{font-size:.78rem;color:var(--muted)}
+.upload-zone strong{color:var(--blue)}
+.prog-wrap{background:var(--border);border-radius:20px;height:6px;overflow:hidden;margin:8px 0}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--blue),var(--sky));border-radius:20px;transition:width .3s ease;width:0}
+.file-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.file-item{display:flex;align-items:center;gap:10px;background:var(--ice2);border-radius:8px;padding:9px 12px;border:1px solid var(--border)}
+.file-item-icon{width:32px;height:32px;border-radius:7px;background:rgba(59,158,255,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.file-item-icon svg{width:15px;height:15px;color:var(--blue)}
+.file-item-name{flex:1;font-size:.78rem;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-item-date{font-size:.67rem;color:var(--muted)}
+.file-item-actions{display:flex;gap:5px}
+.file-item-actions button{padding:3px 9px;border-radius:5px;font-size:.67rem;cursor:pointer;font-family:'DM Sans',sans-serif;border:none;transition:all .15s}
+.fbtn-view{background:rgba(59,158,255,.1);color:var(--blue)}
+.fbtn-del{background:rgba(214,64,69,.1);color:var(--error)}
+
+/* ═══════ APPOINTMENTS ═══════ */
+.appt-layout{display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start}
+.wnav{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.wnbtn{width:28px;height:28px;border-radius:7px;border:1.5px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .15s}
+.wnbtn:hover{border-color:var(--sky);color:var(--sky)}
+.wnbtn svg{width:12px;height:12px}
+.wlabel{font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:600;color:var(--navy)}
+.dcols{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+.dch{text-align:center;padding:8px 4px;border-radius:8px;margin-bottom:7px}
+.dch.today{background:rgba(59,158,255,.1)}
+.dch .dow{font-size:.63rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.dch .dd{font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:600;color:var(--navy);line-height:1;margin-top:1px}
+.dch.today .dd{color:var(--blue)}
+.ablk{border-radius:8px;padding:8px 9px;margin-bottom:6px;cursor:pointer;border-left:3px solid transparent;transition:transform .15s}
+.ablk:hover{transform:translateY(-1px)}
+.ablk.confirmed{background:rgba(46,158,107,.08);border-color:var(--success)}
+.ablk.pending{background:rgba(232,147,10,.08);border-color:var(--warning)}
+.ablk.cancelled{background:rgba(214,64,69,.06);border-color:var(--error);opacity:.7}
+.abt{font-size:.63rem;color:var(--muted);margin-bottom:1px}
+.abn{font-size:.73rem;font-weight:500;color:var(--text)}
+.abr{font-size:.65rem;color:var(--muted);margin-top:1px}
+.abd{font-size:.62rem;color:var(--muted2);margin-top:2px}
+.appt-form-card{background:#fff;border-radius:12px;border:1px solid var(--border);overflow:hidden;position:sticky;top:0}
+.aff{margin-bottom:12px}
+.aff label{display:block;font-size:.7rem;font-weight:500;color:var(--navy);margin-bottom:4px}
+.aff input,.aff select{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--text);background:var(--ice2);outline:none;transition:border-color .2s}
+.aff input:focus,.aff select:focus{border-color:var(--sky);background:#fff}
+.afrow{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.bsub2{width:100%;padding:9px;background:linear-gradient(135deg,var(--blue),#0d3d7a);color:#fff;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:.79rem;font-weight:500;cursor:pointer;transition:transform .15s}
+.bsub2:hover{transform:translateY(-1px)}
+/* WhatsApp reminder */
+.wa-btn{display:flex;align-items:center;gap:6px;width:100%;padding:8px 10px;background:#25d366;color:#fff;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:.77rem;font-weight:500;cursor:pointer;margin-top:7px;transition:transform .15s,box-shadow .15s}
+.wa-btn:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(37,211,102,.3)}
+.wa-btn svg{width:15px;height:15px}
+
+/* ═══════ BILLING ═══════ */
+.bill-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.bill-table th{padding:9px 12px;text-align:left;font-size:.67rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500;border-bottom:2px solid var(--border);background:var(--ice2)}
+.bill-table td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.bill-table tr:last-child td{border-bottom:none}
+.bill-table tr:hover td{background:var(--ice2)}
+.bil-actions{display:flex;gap:6px}
+.bil-actions button{padding:4px 10px;border-radius:6px;font-size:.68rem;cursor:pointer;font-family:'DM Sans',sans-serif;border:none;transition:all .15s}
+.bil-view{background:rgba(59,158,255,.1);color:var(--blue)}
+.bil-view:hover{background:rgba(59,158,255,.2)}
+.bil-print{background:rgba(46,158,107,.1);color:#2e9e6b}
+.bil-print:hover{background:rgba(46,158,107,.2)}
+.bil-wa{background:#25d366;color:#fff}
+.bil-wa:hover{background:#1db855}
+
+/* ═══════ INVOICE PRINT ═══════ */
+.inv-modal{max-width:680px}
+.inv-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;padding-bottom:20px;border-bottom:2px solid var(--border)}
+.inv-brand .inv-name{font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:600;color:var(--navy)}
+.inv-brand .inv-sub{font-size:.75rem;color:var(--muted);margin-top:3px}
+.inv-meta{text-align:right;font-size:.78rem;color:var(--muted);line-height:1.8}
+.inv-meta strong{color:var(--navy)}
+.inv-parties{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.inv-party-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:6px}
+.inv-party-name{font-size:.92rem;font-weight:500;color:var(--navy);margin-bottom:2px}
+.inv-party-detail{font-size:.77rem;color:var(--muted);line-height:1.6}
+.inv-items{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:.8rem}
+.inv-items th{padding:9px 12px;text-align:left;background:var(--navy);color:rgba(255,255,255,.8);font-size:.67rem;text-transform:uppercase;letter-spacing:.08em;font-weight:500}
+.inv-items td{padding:10px 12px;border-bottom:1px solid var(--border)}
+.inv-items td:last-child,.inv-items th:last-child{text-align:right}
+.inv-totals{display:flex;flex-direction:column;align-items:flex-end;gap:5px;margin-bottom:20px}
+.inv-total-row{display:flex;gap:40px;font-size:.8rem;color:var(--muted)}
+.inv-total-row.grand{font-size:.95rem;font-weight:600;color:var(--navy);border-top:2px solid var(--border);padding-top:8px}
+.inv-footer-note{font-size:.73rem;color:var(--muted);border-top:1px solid var(--border);padding-top:12px;text-align:center;line-height:1.6}
+/* arabic note */
+.inv-ar{font-family:'Amiri',serif;font-size:.85rem;direction:rtl;text-align:right;color:var(--muted);margin-top:4px}
+
+/* ═══════ PRESCRIPTIONS ═══════ */
+.rx-list{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.rx-item{background:#fff;border-radius:10px;border:1px solid var(--border);padding:14px;display:flex;align-items:flex-start;gap:12px}
+.rx-icon{width:36px;height:36px;background:rgba(59,158,255,.1);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rx-icon svg{width:17px;height:17px;color:var(--blue)}
+.rx-info{flex:1}
+.rx-drug{font-size:.87rem;font-weight:500;color:var(--navy)}
+.rx-detail{font-size:.75rem;color:var(--muted);margin-top:3px;line-height:1.6}
+.rx-actions{display:flex;gap:6px;margin-top:8px}
+.rx-date{font-size:.68rem;color:var(--muted2)}
+
+/* prescription print area */
+.rx-print{display:none}
+@media print {
+  body>*:not(#rxPrintArea):not(#invPrintArea):not(#patPrintArea){display:none!important}
+  #rxPrintArea,#invPrintArea,#patPrintArea{display:block!important;position:fixed;inset:0;background:#fff;padding:32px;overflow:auto;font-family:'DM Sans',sans-serif}
+  .rx-phead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0a2540;padding-bottom:12px;margin-bottom:16px}
+  .rx-pname{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;color:#0a2540}
+  .rx-pdetail{font-size:.75rem;color:#8da4be;line-height:1.7}
+  .rx-pdate{font-size:.75rem;color:#8da4be;text-align:right}
+  .rx-pat-info{background:#f4f9ff;border-radius:8px;padding:12px;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:.78rem}
+  .rx-pat-info label{font-size:.62rem;color:#8da4be;display:block}
+  .rx-pat-info p{font-weight:500;color:#0a2540}
+  .rx-drug-list{list-style:none;margin-bottom:20px}
+  .rx-drug-list li{padding:10px 0;border-bottom:1px solid #ddeaf6;font-size:.82rem}
+  .rx-drug-list li strong{color:#0a2540}
+  .rx-sig{display:flex;justify-content:space-between;align-items:flex-end;border-top:2px solid #0a2540;padding-top:14px;margin-top:20px}
+  .rx-sig-line{border-top:1px solid #0a2540;width:160px;padding-top:6px;font-size:.7rem;color:#8da4be;text-align:center}
+  .inv-wrap *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}
+#rxPrintArea,#invPrintArea,#patPrintArea{display:none}
+
+/* ═══════ REMINDERS ═══════ */
+.rem-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px;display:flex;align-items:flex-start;gap:13px}
+.rem-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rem-icon.wa{background:#25d366;color:#fff}
+.rem-icon svg{width:18px;height:18px}
+.rem-info{flex:1}
+.rem-title{font-size:.83rem;font-weight:500;color:var(--navy);margin-bottom:3px}
+.rem-detail{font-size:.74rem;color:var(--muted);line-height:1.5}
+.rem-send{padding:6px 14px;border-radius:7px;font-size:.74rem;font-weight:500;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .15s}
+.rem-send.wa{background:#25d366;color:#fff}
+.rem-send.wa:hover{background:#1db855}
+
+/* ═══════ STAFF ═══════ */
+.staff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.staff-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:16px;transition:transform .15s,box-shadow .15s}
+.staff-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(26,95,168,.1)}
+.staff-top{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+.staff-av{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:600;color:#fff;flex-shrink:0}
+.staff-av.dr{background:linear-gradient(135deg,var(--blue),var(--sky))}
+.staff-av.rc{background:linear-gradient(135deg,#2e9e6b,#43c98b)}
+.staff-av.ad{background:linear-gradient(135deg,#e8930a,#f5c842)}
+.staff-name{font-size:.88rem;font-weight:500;color:var(--navy)}
+.staff-email{font-size:.72rem;color:var(--muted);margin-top:1px}
+.staff-footer{display:flex;align-items:center;justify-content:space-between}
+.staff-actions{display:flex;gap:6px}
+.staff-actions button{padding:4px 10px;border-radius:6px;font-size:.67rem;cursor:pointer;font-family:'DM Sans',sans-serif;border:none;transition:all .15s}
+
+/* ═══════ MODALS ═══════ */
+.mo{position:fixed;inset:0;background:rgba(10,37,64,.55);backdrop-filter:blur(4px);z-index:250;display:none;align-items:center;justify-content:center;padding:16px}
+.mo.show{display:flex;animation:fadeIn .2s ease}
+.mb{background:#fff;border-radius:16px;width:min(540px,100%);max-height:92vh;overflow-y:auto;animation:fadeUp .3s ease}
+.mb.wide{width:min(700px,100%)}
+.mh{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:5}
+.mti{font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:600;color:var(--navy)}
+.mbody{padding:18px 22px}
+.mfooter{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:9px;justify-content:flex-end}
+
+/* confirm modal */
+.confirm-icon{width:52px;height:52px;background:rgba(214,64,69,.1);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.confirm-icon svg{width:24px;height:24px;color:var(--error)}
+.confirm-msg{text-align:center;font-size:.85rem;color:var(--text);line-height:1.6;margin-bottom:4px}
+.confirm-sub{text-align:center;font-size:.77rem;color:var(--muted);margin-bottom:20px}
+
+/* ═══════ AI ═══════ */
+#aiPanel{position:fixed;inset:0;z-index:300;display:none;align-items:flex-end;justify-content:flex-end;padding:0}
+#aiPanel.show{display:flex;animation:fadeIn .2s ease}
+.aipbg{position:absolute;inset:0;background:rgba(10,37,64,.4);backdrop-filter:blur(3px)}
+.aibox{position:relative;z-index:1;width:min(420px,100vw);height:min(620px,100vh);background:#fff;border-radius:20px 20px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:slideUp .3s ease;box-shadow:0 -8px 40px rgba(10,37,64,.2)}
+@media(min-width:600px){.aibox{border-radius:20px;margin:20px;height:min(620px,calc(100vh - 40px))}}
+.aih{padding:16px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.aiico{width:34px;height:34px;background:linear-gradient(135deg,var(--blue),var(--sky));border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.aiico svg{width:17px;height:17px;color:#fff}
+.aitit{font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:600;color:var(--navy)}
+.aisu{font-size:.7rem;color:var(--muted);margin-top:1px}
+.aicl{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted);display:flex;align-items:center}
+.aicl svg{width:17px;height:17px}
+.aimodes{display:flex;gap:5px;padding:10px 18px;border-bottom:1px solid var(--border)}
+.aimode{padding:5px 12px;border-radius:6px;font-size:.72rem;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--muted);transition:all .15s}
+.aimode.active{border-color:var(--sky);background:rgba(59,158,255,.08);color:var(--blue)}
+.aipsel{padding:0 18px 10px;border-bottom:1px solid var(--border)}
+.aipsel label{font-size:.7rem;font-weight:500;color:var(--navy);display:block;margin-top:10px}
+.aipsel select{width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.79rem;color:var(--text);background:#fff;outline:none;margin-top:8px}
+.aiqs{display:flex;gap:5px;padding:8px 18px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.aiqb{padding:4px 10px;border-radius:6px;font-size:.7rem;color:var(--blue);background:rgba(59,158,255,.08);border:1px solid rgba(59,158,255,.2);cursor:pointer;transition:all .15s;white-space:nowrap}
+.aiqb:hover{background:rgba(59,158,255,.15)}
+.aichat{flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:10px}
+.aimsg{max-width:86%;padding:10px 13px;border-radius:12px;font-size:.79rem;line-height:1.6}
+.aimsg.user{background:linear-gradient(135deg,var(--blue),#0d3d7a);color:#fff;align-self:flex-end;border-radius:12px 12px 4px 12px}
+.aimsg.ai{background:var(--ice2);color:var(--text);align-self:flex-start;border:1px solid var(--border);border-radius:12px 12px 12px 4px}
+.aiinp-area{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:7px;align-items:flex-end}
+.aiinp{flex:1;padding:9px 11px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:.79rem;color:var(--text);background:var(--ice2);outline:none;resize:none;min-height:38px;max-height:100px;transition:border-color .2s}
+.aiinp:focus{border-color:var(--sky);background:#fff}
+.aisend{width:36px;height:36px;background:linear-gradient(135deg,var(--blue),#0d3d7a);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.aisend svg{width:15px;height:15px;color:#fff}
+
+/* ═══════ FAB ═══════ */
+.fab{position:fixed;bottom:22px;right:22px;width:48px;height:48px;background:linear-gradient(135deg,var(--blue),#0d3d7a);border:none;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(26,95,168,.4);z-index:100;transition:transform .15s}
+.fab:hover{transform:translateY(-2px)}
+.fab svg{width:20px;height:20px;color:#fff}
+
+/* ═══════ TOAST ═══════ */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--navy);color:#fff;padding:10px 16px;border-radius:10px;font-size:.78rem;display:flex;align-items:center;gap:8px;box-shadow:0 6px 24px rgba(0,0,0,.3);z-index:999;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast svg{width:14px;height:14px;color:#4ecf8e;flex-shrink:0}
+
+/* ═══════ RESPONSIVE ═══════ */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;height:100vh;transform:translateX(-100%);z-index:50}
+  .sidebar.open{transform:translateX(0)}
+  .sov.show{display:block}
+  .ham{display:flex}
+  .tbsrch{display:none}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .dash-grid{grid-template-columns:1fr}
+  .appt-layout{grid-template-columns:1fr}
+  .appt-form-card{position:static}
+  .dcols{grid-template-columns:repeat(3,1fr)}
+  .pg{grid-template-columns:1fr}
+  .ca{padding:12px}
+  .inv-parties{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:9px}
+  .dcols{grid-template-columns:repeat(2,1fr)}
+  .mrow{grid-template-columns:1fr}
+  .lc{flex-direction:column}
+  .ll{display:none}
+  .lr{border-radius:20px;padding:32px 22px}
+  .mfooter{flex-direction:column}
+  .btn-save,.btn-cancel,.btn-danger{width:100%;text-align:center}
+  .inv-hd{flex-direction:column;gap:12px}
+  .inv-meta{text-align:left}
+}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideLeft{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}60%{transform:translateX(6px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pulse{animation:pulse 1.4s ease infinite}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="loginPage">
+  <div class="lc">
+    <div class="ll">
+      <div>
+        <div class="bicon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+        <div class="bname">OrthoAssist</div>
+        <div class="bsub">Practice Management System</div>
+      </div>
+      <div>
+        <div class="pt">Your intelligent orthopedic practice companion</div>
+        <div class="pd">Secure, role-based access for your entire clinical team.</div>
+      </div>
+      <ul class="fl">
+        <li><span class="dot"></span>Multi-role access control</li>
+        <li><span class="dot"></span>Firebase real-time sync</li>
+        <li><span class="dot"></span>Billing & invoicing (EGP/USD)</li>
+        <li><span class="dot"></span>WhatsApp appointment reminders</li>
+      </ul>
+    </div>
+    <div class="lr">
+      <div class="fey">Secure Access</div>
+      <div class="fti">Welcome back</div>
+      <div class="fsu">Sign in — your access level is set automatically</div>
+
+      <!-- Role is detected automatically from Firestore — no manual selection needed -->
+      <div class="errmsg" id="loginErr">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="loginErrTxt">Invalid credentials.</span>
+      </div>
+
+      <!-- Detected role badge (shown after email lookup) -->
+      <div id="rolePill" style="display:none;align-items:center;gap:8px;background:var(--ice2);border-radius:9px;padding:9px 13px;margin-bottom:14px;font-size:.78rem;border:1.5px solid var(--border)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;color:var(--sky);flex-shrink:0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        Signing in as <strong id="rolePillText" style="color:var(--navy);margin-left:3px"></strong>
+      </div>
+
+      <div class="fg">
+        <label>Email</label>
+        <div class="iw">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <input type="email" id="loginEmail" placeholder="your@email.com" oninput="onEmailInput()"/>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Password</label>
+        <div class="iw">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input type="password" id="loginPw" placeholder="Enter your password"/>
+          <button class="tgp" id="tgpass"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+      <button class="btnp" id="loginBtn"><span class="bt">Sign In</span><div class="sp"></div></button>
+
+      <div class="fb-note" id="fbNote" style="margin-top:16px">
+        <span id="fbStatusLine"><strong>&#9203; Checking Firebase&hellip;</strong></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ APP SHELL ══════════════ -->
+<div id="appShell">
+  <div class="sov" id="sov" onclick="closeSidebar()"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="slogo">
+      <div class="bicon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+      <div class="bname">OrthoAssist</div>
+      <div class="bsub">Practice Management</div>
+    </div>
+    <nav class="snav" id="sidebarNav">
+      <!-- rendered by JS based on role -->
+    </nav>
+    <div class="susr">
+      <div class="ucard">
+        <div class="uavt" id="uAvt">Dr</div>
+        <div><div class="uname" id="uName">Dr. Physician</div><div class="urole"><span class="rbadge doctor" id="uRoleBadge">Doctor</span></div></div>
+        <button class="lbtn" id="logoutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-area">
+    <div class="topbar">
+      <button class="ham" id="hamBtn" onclick="openSidebar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      <div><div class="tbt" id="tbTitle">Dashboard</div><div class="tbd" id="tbDate"></div></div>
+      <div class="tbsp"></div>
+      <div class="tbsrch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search patients…" id="gSearch"/></div>
+      <button class="tbbtn ndot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
+      <button class="tbbtn" onclick="openAI()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/><circle cx="9" cy="13" r="1" fill="currentColor"/><circle cx="15" cy="13" r="1" fill="currentColor"/></svg></button>
+    </div>
+
+    <div class="ca">
+
+      <!-- ── DASHBOARD ── -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid">
+          <div class="sc bl"><div class="si bl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="sv" id="sPats">6</div><div class="sl">Active Patients</div><div class="str">↑ 3 this month</div></div>
+          <div class="sc gr"><div class="si gr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="sv" id="sToday">6</div><div class="sl">Today's Appts</div><div class="str">↑ 2 confirmed</div></div>
+          <div class="sc or"><div class="si or"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="sv" id="sBill">0</div><div class="sl">Unpaid Invoices</div><div class="str">Needs attention</div></div>
+          <div class="sc pu"><div class="si pu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="sv" id="sRx">0</div><div class="sl">Prescriptions Today</div><div class="str">Active</div></div>
+        </div>
+        <div class="dash-grid">
+          <div class="card">
+            <div class="card-hd"><div class="card-ti">Today's Schedule</div><span class="card-ac" onclick="navigate('appointments')">View all →</span></div>
+            <div class="card-bd"><ul class="al" id="todayList"></ul></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card">
+              <div class="card-hd"><div class="card-ti">Upcoming Surgeries</div></div>
+              <div class="card-bd">
+                <div class="sgi"><div class="sgd"><div class="sgdd">27</div><div class="sgdm">Feb</div></div><div style="flex:1"><div style="font-size:.8rem;font-weight:500;color:var(--text)">Ahmed Al-Rashidi</div><div style="font-size:.71rem;color:var(--muted)">Total Knee Replacement</div></div><div style="font-size:.7rem;color:var(--muted)">07:30</div></div>
+                <div class="sgi"><div class="sgd"><div class="sgdd">03</div><div class="sgdm">Mar</div></div><div style="flex:1"><div style="font-size:.8rem;font-weight:500;color:var(--text)">Nadia Khoury</div><div style="font-size:.71rem;color:var(--muted)">Rotator Cuff Repair</div></div><div style="font-size:.7rem;color:var(--muted)">09:00</div></div>
+                <div class="sgi"><div class="sgd"><div class="sgdd">10</div><div class="sgdm">Mar</div></div><div style="flex:1"><div style="font-size:.8rem;font-weight:500;color:var(--text)">Omar Mansour</div><div style="font-size:.71rem;color:var(--muted)">Spinal Fusion L4–L5</div></div><div style="font-size:.7rem;color:var(--muted)">08:00</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hd"><div class="card-ti">Recent Activity</div></div>
+              <div class="card-bd">
+                <ul class="acl">
+                  <li class="aci"><div class="acd gr"></div><div><div class="act"><span>Fatima Al-Hassan</span> checked in</div><div class="actime">8 min ago</div></div></li>
+                  <li class="aci"><div class="acd bl"></div><div><div class="act">X-ray uploaded for <span>Khalid Ibrahim</span></div><div class="actime">32 min ago</div></div></li>
+                  <li class="aci"><div class="acd or"></div><div><div class="act">Invoice #INV-003 sent to <span>Nadia Khoury</span></div><div class="actime">1 hr ago</div></div></li>
+                  <li class="aci"><div class="acd gr"></div><div><div class="act">Prescription issued for <span>Layla Qasim</span></div><div class="actime">2 hr ago</div></div></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PATIENTS ── -->
+      <div class="page" id="page-patients">
+        <div class="ph">
+          <div><div class="phead">Patients</div><div class="psub" id="patSub">6 active patients</div></div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+            <button class="exp-btn" onclick="exportPatCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+            <button class="btn-add" onclick="openAddPat()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Patient</button>
+          </div>
+        </div>
+        <div class="fbar">
+          <div class="fsearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search…" id="patSearch" oninput="filterPats(this.value)"/></div>
+          <button class="fbtn active" onclick="filterBy('all',this)">All</button>
+          <button class="fbtn" onclick="filterBy('knee',this)">Knee</button>
+          <button class="fbtn" onclick="filterBy('spine',this)">Spine</button>
+          <button class="fbtn" onclick="filterBy('shoulder',this)">Shoulder</button>
+        </div>
+        <div class="pg" id="pGrid"></div>
+      </div>
+
+      <!-- ── APPOINTMENTS ── -->
+      <div class="page" id="page-appointments">
+        <div class="ph">
+          <div><div class="phead">Appointments</div><div class="psub" id="apptSub"></div></div>
+          <button class="exp-btn" onclick="exportApptCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+        </div>
+        <div class="appt-layout">
+          <div>
+            <div class="wnav">
+              <button class="wnbtn" onclick="changeWeek(-1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+              <div class="wlabel" id="weekLabel"></div>
+              <button class="wnbtn" onclick="changeWeek(1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+            </div>
+            <div class="dcols" id="weekCols"></div>
+          </div>
+          <div>
+            <div class="appt-form-card">
+              <div class="card-hd"><div class="card-ti">New Appointment</div></div>
+              <div style="padding:14px">
+                <div class="aff"><label>Patient</label><select id="naPat"><option value="">Select…</option></select></div>
+                <div class="aff"><label>Reason</label><input type="text" id="naReason" placeholder="Follow-up, Consultation…"/></div>
+                <div class="afrow">
+                  <div class="aff"><label>Date</label><input type="date" id="naDate"/></div>
+                  <div class="aff"><label>Time</label><input type="time" id="naTime"/></div>
+                </div>
+                <div class="afrow">
+                  <div class="aff"><label>Duration</label><select id="naDur"><option value="15">15 min</option><option value="30" selected>30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="90">90 min</option></select></div>
+                  <div class="aff"><label>Status</label><select id="naStatus"><option value="confirmed">Confirmed</option><option value="pending">Pending</option></select></div>
+                </div>
+                <button class="bsub2" onclick="addAppt()">Schedule</button>
+                <button class="wa-btn" onclick="sendBulkReminders()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  Send WhatsApp Reminders
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── BILLING ── -->
+      <div class="page" id="page-billing">
+        <div class="ph">
+          <div><div class="phead">Billing & Invoices</div><div class="psub">Manage patient invoices — EGP &amp; USD</div></div>
+          <button class="btn-add" onclick="openNewInvoice()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Invoice</button>
+        </div>
+        <div class="card">
+          <div class="card-bd" style="padding:0">
+            <table class="bill-table" id="billTable">
+              <thead><tr><th>Invoice #</th><th>Patient</th><th>Service</th><th>Amount (EGP)</th><th>Amount (USD)</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="billBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PRESCRIPTIONS ── -->
+      <div class="page" id="page-prescriptions">
+        <div class="ph">
+          <div><div class="phead">Prescriptions</div><div class="psub">Issue and manage patient prescriptions</div></div>
+          <button class="btn-add" onclick="openNewRx()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Prescription</button>
+        </div>
+        <div class="rx-list" id="rxList"></div>
+      </div>
+
+      <!-- ── REMINDERS ── -->
+      <div class="page" id="page-reminders">
+        <div class="ph"><div><div class="phead">WhatsApp Reminders</div><div class="psub">Send appointment reminders via WhatsApp Business API</div></div></div>
+        <div style="background:#fff;border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:16px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="width:38px;height:38px;background:#25d366;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg viewBox="0 0 24 24" fill="white" width="20" height="20"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.549 4.12 1.51 5.856L0 24l6.336-1.479A11.953 11.953 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.887 0-3.659-.515-5.181-1.414l-.371-.22-3.762.877.904-3.662-.241-.38A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:.85rem;font-weight:500;color:var(--navy);margin-bottom:4px">WhatsApp Business API</div>
+              <div style="font-size:.77rem;color:var(--muted);line-height:1.6;margin-bottom:12px">Connect your WhatsApp Business account to send automated appointment reminders, confirmations, and follow-up messages directly to patients.</div>
+              <div style="background:var(--ice2);border-radius:8px;padding:12px;font-size:.77rem;color:var(--muted);border-left:3px solid #25d366;margin-bottom:12px">
+                <strong style="color:var(--navy)">To activate:</strong> Register at <strong>business.whatsapp.com</strong>, obtain your <strong>Phone Number ID</strong> and <strong>Access Token</strong>, then paste them in the configuration below.
+              </div>
+              <div class="mrow" style="margin-bottom:10px">
+                <div class="mf" style="margin:0"><label>Phone Number ID</label><input type="text" id="waPhoneId" placeholder="e.g. 123456789012345"/></div>
+                <div class="mf" style="margin:0"><label>Access Token</label><input type="text" id="waToken" placeholder="Bearer token…"/></div>
+              </div>
+              <button class="btn-save" style="padding:8px 18px;font-size:.79rem" onclick="saveWAConfig()">Save Configuration</button>
+            </div>
+          </div>
+        </div>
+        <div class="phead" style="font-size:1.1rem;margin-bottom:12px">Today's Reminders Queue</div>
+        <div id="remindersList"></div>
+      </div>
+
+      <!-- ── STAFF ── -->
+      <div class="page" id="page-staff">
+        <div class="ph">
+          <div><div class="phead">Staff & Accounts</div><div class="psub">Manage team members and access roles</div></div>
+          <button class="btn-add" onclick="openAddStaff()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Staff</button>
+        </div>
+        <div class="staff-grid" id="staffGrid"></div>
+      </div>
+
+    </div><!-- /ca -->
+  </div><!-- /main-area -->
+</div><!-- /appShell -->
+
+<!-- ════ PATIENT DETAIL OVERLAY ════ -->
+<div class="overlay" id="patOverlay" onclick="closePat(event)">
+  <div class="dpanel" id="dpanel">
+    <div class="dph">
+      <div class="dtabs">
+        <button class="dtab active" onclick="switchDTab('info',this)">Info</button>
+        <button class="dtab" onclick="switchDTab('notes',this)">Notes</button>
+        <button class="dtab" onclick="switchDTab('imaging',this)">Imaging</button>
+        <button class="dtab" onclick="switchDTab('rx',this)">Rx</button>
+        <button class="dtab" onclick="switchDTab('billing',this)">Billing</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <button class="exp-btn" style="padding:5px 9px;font-size:.7rem" onclick="printPat()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print</button>
+        <button class="dclose" onclick="closePatDirect()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+    </div>
+    <div class="dpb" id="dpb"></div>
+  </div>
+</div>
+
+<!-- ════ ADD/EDIT PATIENT MODAL ════ -->
+<div class="mo" id="patModal">
+  <div class="mb">
+    <div class="mh"><div class="mti" id="patModalTi">Add Patient</div><button class="dclose" onclick="closeModal('patModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="mbody">
+      <input type="hidden" id="ePid"/>
+      <div class="mrow"><div class="mf"><label>Full Name *</label><input type="text" id="mName" placeholder="Patient full name"/></div><div class="mf"><label>Date of Birth *</label><input type="date" id="mDob"/></div></div>
+      <div class="mrow"><div class="mf"><label>Gender</label><select id="mGender"><option>Male</option><option>Female</option></select></div><div class="mf"><label>Phone</label><input type="text" id="mPhone" placeholder="+20 1x xxxx xxxx"/></div></div>
+      <div class="mf"><label>Email</label><input type="email" id="mEmail"/></div>
+      <div class="mf"><label>Primary Diagnosis *</label><input type="text" id="mDiag" placeholder="e.g. Knee OA…"/></div>
+      <div class="mrow"><div class="mf"><label>Condition</label><select id="mCond"><option value="knee">Knee</option><option value="spine">Spine</option><option value="shoulder">Shoulder</option><option value="other">Other</option></select></div><div class="mf"><label>Insurance</label><input type="text" id="mIns"/></div></div>
+      <div class="mrow"><div class="mf"><label>Policy No.</label><input type="text" id="mInsNo"/></div><div class="mf"><label>Imaging Notes</label><input type="text" id="mImg" placeholder="Brief summary"/></div></div>
+    </div>
+    <div class="mfooter"><button class="btn-cancel" onclick="closeModal('patModal')">Cancel</button><button class="btn-save" onclick="savePat()">Save Patient</button></div>
+  </div>
+</div>
+
+<!-- ════ CONFIRM DELETE MODAL ════ -->
+<div class="mo" id="confirmModal">
+  <div class="mb" style="max-width:400px">
+    <div class="mbody" style="padding-top:24px">
+      <div class="confirm-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
+      <div class="confirm-msg" id="confirmMsg">Are you sure you want to delete this patient?</div>
+      <div class="confirm-sub">This action cannot be undone. All records will be permanently removed.</div>
+    </div>
+    <div class="mfooter"><button class="btn-cancel" onclick="closeModal('confirmModal')">Cancel</button><button class="btn-danger" id="confirmOkBtn">Delete</button></div>
+  </div>
+</div>
+
+<!-- ════ NEW INVOICE MODAL ════ -->
+<div class="mo" id="invoiceModal">
+  <div class="mb wide">
+    <div class="mh"><div class="mti" id="invModalTi">New Invoice</div><button class="dclose" onclick="closeModal('invoiceModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="mbody">
+      <div class="mrow"><div class="mf"><label>Patient *</label><select id="invPat"><option value="">Select patient…</option></select></div><div class="mf"><label>Invoice Date</label><input type="date" id="invDate"/></div></div>
+      <div class="mf"><label>Service / Procedure *</label><input type="text" id="invService" placeholder="e.g. Consultation, Knee Replacement…"/></div>
+      <div class="mrow"><div class="mf"><label>Amount (EGP) *</label><input type="number" id="invEGP" placeholder="0.00" oninput="calcUSD()"/></div><div class="mf"><label>Amount (USD) — auto-calculated</label><input type="number" id="invUSD" placeholder="0.00" readonly style="background:var(--ice2);color:var(--muted)"/></div></div>
+      <div class="mrow"><div class="mf"><label>Tax %</label><input type="number" id="invTax" value="14" oninput="calcUSD()"/></div><div class="mf"><label>Status</label><select id="invStatus"><option value="unpaid">Unpaid</option><option value="paid">Paid</option><option value="partial">Partial</option></select></div></div>
+      <div class="mf"><label>Notes (Arabic / English)</label><textarea id="invNotes" placeholder="Any additional notes…"></textarea></div>
+    </div>
+    <div class="mfooter"><button class="btn-cancel" onclick="closeModal('invoiceModal')">Cancel</button><button class="btn-save" onclick="saveInvoice()">Create Invoice</button></div>
+  </div>
+</div>
+
+<!-- ════ INVOICE VIEW MODAL ════ -->
+<div class="mo" id="invViewModal">
+  <div class="mb wide">
+    <div class="mh"><div class="mti">Invoice</div>
+      <div style="display:flex;gap:7px;align-items:center">
+        <button class="exp-btn" onclick="printInvoice()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print</button>
+        <button class="wa-btn" style="width:auto;padding:6px 12px;font-size:.73rem;margin:0" onclick="sendInvoiceWA()"><svg viewBox="0 0 24 24" fill="white" width="13" height="13"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.549 4.12 1.51 5.856L0 24l6.336-1.479A11.953 11.953 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.887 0-3.659-.515-5.181-1.414l-.371-.22-3.762.877.904-3.662-.241-.38A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>Send WhatsApp</button>
+        <button class="dclose" onclick="closeModal('invViewModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+    </div>
+    <div class="mbody" id="invViewBody"></div>
+  </div>
+</div>
+
+<!-- ════ NEW PRESCRIPTION MODAL ════ -->
+<div class="mo" id="rxModal">
+  <div class="mb">
+    <div class="mh"><div class="mti">New Prescription</div><button class="dclose" onclick="closeModal('rxModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="mbody">
+      <div class="mf"><label>Patient *</label><select id="rxPat"><option value="">Select patient…</option></select></div>
+      <div class="mf"><label>Diagnosis</label><input type="text" id="rxDiag" placeholder="Linked diagnosis"/></div>
+      <div id="rxDrugs">
+        <div class="phead" style="font-size:.9rem;margin-bottom:10px">Medications</div>
+        <div id="rxDrugList"></div>
+        <button type="button" style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:7px;font-size:.75rem;color:var(--blue);background:rgba(59,158,255,.08);border:1px solid rgba(59,158,255,.2);cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:12px" onclick="addRxRow()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Medication
+        </button>
+      </div>
+      <div class="mrow"><div class="mf"><label>Date</label><input type="date" id="rxDate"/></div><div class="mf"><label>Follow-up</label><input type="date" id="rxFollowup"/></div></div>
+      <div class="mf"><label>Doctor's Notes</label><textarea id="rxNotes" placeholder="Additional instructions…"></textarea></div>
+    </div>
+    <div class="mfooter"><button class="btn-cancel" onclick="closeModal('rxModal')">Cancel</button><button class="btn-save" onclick="saveRx()">Issue Prescription</button></div>
+  </div>
+</div>
+
+<!-- ════ ADD STAFF MODAL ════ -->
+<div class="mo" id="staffModal">
+  <div class="mb">
+    <div class="mh"><div class="mti">Add Staff Member</div><button class="dclose" onclick="closeModal('staffModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="mbody">
+      <div class="mrow"><div class="mf"><label>Full Name *</label><input type="text" id="sName"/></div><div class="mf"><label>Role *</label><select id="sRole"><option value="doctor">Doctor</option><option value="receptionist">Receptionist</option><option value="admin">Admin</option></select></div></div>
+      <div class="mrow"><div class="mf"><label>Email *</label><input type="email" id="sEmail"/></div><div class="mf"><label>Phone</label><input type="text" id="sPhone"/></div></div>
+      <div class="mf"><label>Speciality / Department</label><input type="text" id="sSpec" placeholder="e.g. Orthopedic Surgery"/></div>
+      <div class="mrow"><div class="mf"><label>Password *</label><input type="password" id="sPw" placeholder="Min 6 characters"/></div><div class="mf"><label>Confirm Password</label><input type="password" id="sPw2"/></div></div>
+      <div style="background:var(--ice2);border-radius:8px;padding:10px 12px;font-size:.74rem;color:var(--muted);border-left:3px solid var(--sky)">
+        With Firebase configured, this will create a real login account for this staff member.
+      </div>
+    </div>
+    <div class="mfooter"><button class="btn-cancel" onclick="closeModal('staffModal')">Cancel</button><button class="btn-save" onclick="saveStaff()">Create Account</button></div>
+  </div>
+</div>
+
+<!-- ════ AI PANEL ════ -->
+<div id="aiPanel">
+  <div class="aipbg" onclick="closeAI()"></div>
+  <div class="aibox">
+    <div class="aih">
+      <div class="aiico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/><circle cx="9" cy="13" r="1" fill="currentColor"/><circle cx="15" cy="13" r="1" fill="currentColor"/></svg></div>
+      <div><div class="aitit">AI Assistant</div><div class="aisu">Clinical documentation helper</div></div>
+      <button class="aicl" onclick="closeAI()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="aimodes">
+      <button class="aimode active" onclick="setAIMode('notes',this)">Draft Notes</button>
+      <button class="aimode" onclick="setAIMode('summary',this)">Summarize</button>
+      <button class="aimode" onclick="setAIMode('rx',this)">Rx Assist</button>
+    </div>
+    <div class="aipsel"><label>Patient</label><select id="aiPat" onchange="aiPatChange()"><option value="">— Choose patient —</option></select></div>
+    <div class="aiqs">
+      <button class="aiqb" onclick="aiQ('Draft SOAP note for today visit')">SOAP Note</button>
+      <button class="aiqb" onclick="aiQ('Summarize patient history')">Summary</button>
+      <button class="aiqb" onclick="aiQ('Suggest medications for diagnosis')">Rx Suggest</button>
+      <button class="aiqb" onclick="aiQ('Draft referral letter')">Referral</button>
+    </div>
+    <div class="aichat" id="aiChat"><div class="aimsg ai">Hello, Doctor. Select a patient and I'll help you draft notes, summarize history, or suggest medications.</div></div>
+    <div class="aiinp-area">
+      <textarea class="aiinp" id="aiInp" placeholder="Type your request…" rows="1" onkeydown="aiKD(event)"></textarea>
+      <button class="aisend" onclick="aiSend()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<!-- Print areas -->
+<div id="rxPrintArea"></div>
+<div id="invPrintArea"></div>
+<div id="patPrintArea"></div>
+
+<div class="toast" id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span id="toastMsg"></span></div>
+<button class="fab" onclick="openAI()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/><circle cx="9" cy="13" r="1" fill="currentColor"/><circle cx="15" cy="13" r="1" fill="currentColor"/></svg></button>
+
+<script>
+// ══════════════════════════════════════
+//  CONSTANTS & STATE
+// ══════════════════════════════════════
+const EGP_USD = 0.0203; // 1 EGP ≈ 0.0203 USD (adjustable)
+const ROLE_NAV = {
+  doctor: ['dashboard','patients','appointments','prescriptions','billing','reminders'],
+  receptionist: ['dashboard','patients','appointments','billing','reminders'],
+  admin: ['dashboard','patients','appointments','billing','prescriptions','reminders','staff']
+};
+const NAV_LABELS = {
+  dashboard:'Dashboard', patients:'Patients', appointments:'Appointments',
+  prescriptions:'Prescriptions', billing:'Billing', reminders:'Reminders', staff:'Staff'
+};
+const NAV_ICONS = {
+  dashboard:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+  patients:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  appointments:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  prescriptions:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+  billing:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  reminders:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  staff:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+};
+const COLORS = ['c1','c2','c3','c4','c5'];
+
+let PATIENTS = [
+  {id:'PT-001',name:'Fatima Al-Hassan',dob:'1978-03-14',age:46,gender:'Female',phone:'+20 100 123 4567',email:'fatima.hassan@email.com',diagnosis:'Osteoarthritis – Right Knee',condition:'knee',insurance:'GlobeMed',insuranceNo:'GM-778821',imaging:'AP & Lateral X-ray (Jan 2025) – Grade III OA',color:'c1',notes:[{date:'2026-02-18',type:'Follow-up',text:'Patient reports improvement in knee pain. Swelling reduced. Continuing physiotherapy 3x/week. Celecoxib 200mg daily. Review in 4 weeks.'}],visits:[{day:'18',mon:'Feb',type:'Follow-up',note:'Knee pain improvement, reduced swelling'},{day:'04',mon:'Jan',type:'Consultation',note:'Initial assessment, X-ray ordered'}]},
+  {id:'PT-002',name:'Khalid Ibrahim',dob:'1965-07-22',age:59,gender:'Male',phone:'+20 111 987 6543',email:'khalid.ibrahim@email.com',diagnosis:'Lumbar Disc Herniation L4–L5',condition:'spine',insurance:'Allianz Egypt',insuranceNo:'AE-334455',imaging:'MRI Lumbar Spine (Jan 2025) – L4-L5 disc protrusion',color:'c2',notes:[{date:'2026-02-20',type:'Review',text:'MRI confirms L4-L5 herniation with left-sided radiculopathy. Conservative treatment ongoing.'}],visits:[{day:'20',mon:'Feb',type:'Review',note:'MRI results discussed'},{day:'10',mon:'Jan',type:'MRI Review',note:'L4-L5 herniation confirmed'}]},
+  {id:'PT-003',name:'Nadia Khoury',dob:'1990-11-05',age:34,gender:'Female',phone:'+20 122 456 7890',email:'nadia.khoury@email.com',diagnosis:'Rotator Cuff Tear – Left Shoulder',condition:'shoulder',insurance:'AXA Egypt',insuranceNo:'AX-991234',imaging:'MRI Shoulder (Feb 2025) – Partial supraspinatus tear',color:'c3',notes:[{date:'2026-02-22',type:'Pre-op',text:'Pre-operative assessment completed. Surgery scheduled Feb 27.'}],visits:[{day:'22',mon:'Feb',type:'Pre-op',note:'Pre-op assessment completed'}]},
+  {id:'PT-004',name:'Ahmed Al-Rashidi',dob:'1972-09-30',age:52,gender:'Male',phone:'+20 100 321 0987',email:'ahmed.rashidi@email.com',diagnosis:'End-stage Knee OA – Right',condition:'knee',insurance:'GlobeMed',insuranceNo:'GM-556677',imaging:'Weight-bearing X-ray (Jan 2025) – Bone-on-bone OA',color:'c4',notes:[{date:'2026-02-21',type:'Pre-op',text:'TKR scheduled Feb 27. Consent signed. All pre-op investigations clear.'}],visits:[{day:'21',mon:'Feb',type:'Pre-op',note:'TKR scheduled Feb 27'}]},
+  {id:'PT-005',name:'Layla Qasim',dob:'1985-04-18',age:39,gender:'Female',phone:'+20 111 654 3210',email:'layla.qasim@email.com',diagnosis:'Patellofemoral Syndrome',condition:'knee',insurance:'MetLife Egypt',insuranceNo:'ML-112233',imaging:'X-ray (Jan 2025) – Mild patellar tilt',color:'c5',notes:[{date:'2026-02-19',type:'Follow-up',text:'Responding well to physiotherapy. Pain reduced from 7/10 to 3/10.'}],visits:[{day:'19',mon:'Feb',type:'Follow-up',note:'Responding well to physio'}]},
+  {id:'PT-006',name:'Omar Mansour',dob:'1968-12-01',age:56,gender:'Male',phone:'+20 122 789 0123',email:'omar.mansour@email.com',diagnosis:'Spinal Stenosis L3–L5',condition:'spine',insurance:'Allianz Egypt',insuranceNo:'AE-667788',imaging:'MRI Lumbar (Feb 2025) – Severe stenosis L3-L5',color:'c1',notes:[{date:'2026-02-17',type:'Review',text:'Neurogenic claudication worsening. Laminectomy L3-L5 scheduled March 10.'}],visits:[{day:'17',mon:'Feb',type:'Review',note:'Surgery planned'}]},
+];
+
+let APPOINTMENTS = [
+  {id:'A01',patientId:'PT-001',patient:'Fatima Al-Hassan',reason:'Follow-up',date:'2026-02-25',time:'09:00',duration:30,status:'confirmed'},
+  {id:'A02',patientId:'PT-002',patient:'Khalid Ibrahim',reason:'MRI Review',date:'2026-02-25',time:'09:45',duration:45,status:'confirmed'},
+  {id:'A03',patientId:'PT-003',patient:'Nadia Khoury',reason:'Pre-op Assessment',date:'2026-02-25',time:'11:00',duration:60,status:'confirmed'},
+  {id:'A04',patientId:'PT-004',patient:'Ahmed Al-Rashidi',reason:'Surgical Consent',date:'2026-02-25',time:'12:30',duration:30,status:'pending'},
+  {id:'A05',patientId:'PT-005',patient:'Layla Qasim',reason:'Physio Review',date:'2026-02-25',time:'14:00',duration:30,status:'confirmed'},
+  {id:'A06',patientId:'PT-006',patient:'Omar Mansour',reason:'Stenosis Consult',date:'2026-02-25',time:'15:00',duration:45,status:'confirmed'},
+  {id:'A07',patientId:'PT-001',patient:'Fatima Al-Hassan',reason:'X-ray Review',date:'2026-02-26',time:'10:00',duration:30,status:'confirmed'},
+  {id:'A08',patientId:'PT-002',patient:'Khalid Ibrahim',reason:'Pain Review',date:'2026-02-27',time:'09:30',duration:30,status:'pending'},
+];
+
+let INVOICES = [
+  {id:'INV-001',patientId:'PT-001',patient:'Fatima Al-Hassan',service:'Consultation + X-ray',egp:1200,usd:(1200*EGP_USD).toFixed(2),date:'2026-02-18',status:'paid',notes:'Follow-up visit'},
+  {id:'INV-002',patientId:'PT-002',patient:'Khalid Ibrahim',service:'MRI Review & Consultation',egp:2500,usd:(2500*EGP_USD).toFixed(2),date:'2026-02-20',status:'unpaid',notes:''},
+  {id:'INV-003',patientId:'PT-003',patient:'Nadia Khoury',service:'Pre-operative Assessment',egp:3000,usd:(3000*EGP_USD).toFixed(2),date:'2026-02-22',status:'partial',notes:'50% deposit received'},
+];
+
+let PRESCRIPTIONS = [
+  {id:'RX-001',patientId:'PT-001',patient:'Fatima Al-Hassan',diagnosis:'Knee OA',drugs:[{name:'Celecoxib',dose:'200mg',frequency:'Once daily',duration:'30 days',refills:1},{name:'Omeprazole',dose:'20mg',frequency:'Once daily',duration:'30 days',refills:1}],date:'2026-02-18',followup:'2026-03-18',notes:'Take with food. Avoid NSAIDs.'},
+  {id:'RX-002',patientId:'PT-005',patient:'Layla Qasim',diagnosis:'Patellofemoral Syndrome',drugs:[{name:'Naproxen',dose:'500mg',frequency:'Twice daily',duration:'2 weeks',refills:0},{name:'Physiotherapy Referral',dose:'—',frequency:'3x/week',duration:'6 weeks',refills:0}],date:'2026-02-19',followup:'2026-03-19',notes:'Ice after exercise. VMO strengthening.'},
+];
+
+let STAFF = [
+  {id:'S-001',name:'Dr. Ahmed Hassan',role:'doctor',email:'dr.ahmed@orthoassist.com',phone:'+20 100 111 2222',spec:'Orthopedic Surgeon'},
+  {id:'S-002',name:'Sara Mahmoud',role:'receptionist',email:'sara@orthoassist.com',phone:'+20 111 333 4444',spec:'Front Desk'},
+  {id:'S-003',name:'Youssef Admin',role:'admin',email:'admin@orthoassist.com',phone:'+20 122 555 6666',spec:'Practice Administrator'},
+];
+
+let currentRole = 'doctor', currentUser = {name:'Dr. Physician', email:'doctor@orthoassist.com'};
+let currentPatId = null, weekOffset = 0, filterCond = 'all', aiMode = 'notes';
+let currentInvId = null, pendingDeleteId = null;
+let rxRows = 0;
+
+// ══════════════════════════════════════
+//  LOGIN & AUTH
+// ══════════════════════════════════════
+document.getElementById('tgpass').addEventListener('click',()=>{
+  const p=document.getElementById('loginPw');
+  p.type=p.type==='password'?'text':'password';
+});
+// setRole() removed — role auto-detected from Firestore
+// Pre-fetch role when email is typed (non-blocking)
+let _prefetchedRole = null;
+function onEmailInput(){
+  _prefetchedRole = null;
+  document.getElementById('rolePill').style.display = 'none';
+  const email = document.getElementById('loginEmail').value.trim();
+  if(!email.includes('@') || !window._FB?.FB_READY) return;
+  // Debounce
+  clearTimeout(window._emailTimer);
+  window._emailTimer = setTimeout(async ()=>{
+    try{
+      const {db,collection,getDocs} = window._FB;
+      const snaps = await getDocs(collection(db,'staff'));
+      const match = [];
+      snaps.forEach(d=>{ if((d.data().email||'').toLowerCase()===email.toLowerCase()) match.push(d.data()); });
+      if(match.length){
+        _prefetchedRole = match[0].role||'doctor';
+        const pill = document.getElementById('rolePill');
+        const roleLabels = {doctor:'🩺 Doctor',receptionist:'📋 Receptionist',admin:'⚙️ Admin'};
+        document.getElementById('rolePillText').textContent = roleLabels[_prefetchedRole]||_prefetchedRole;
+        pill.style.display = 'flex';
+      }
+    }catch(e){ /* silent */ }
+  }, 600);
+}
+
+function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw    = document.getElementById('loginPw').value;
+  const btn   = document.getElementById('loginBtn');
+  if(!email||!pw){ showLoginErr('Please enter email and password.'); return; }
+  btn.classList.add('loading'); btn.disabled=true;
+
+  if(window._FB && window._FB.FB_READY){
+    window._FB.signIn(window._FB.auth, email, pw)
+      .then(async cred => {
+        // Look up role + name from Firestore staff collection
+        try{
+          const {db, collection, getDocs} = window._FB;
+          const snaps = await getDocs(collection(db,'staff'));
+          let staffData = null;
+          snaps.forEach(d=>{ if((d.data().email||'').toLowerCase()===email.toLowerCase()) staffData=d.data(); });
+          if(staffData){
+            currentRole = staffData.role || 'doctor';
+            currentUser = { name: staffData.name||email.split('@')[0], email, role: currentRole };
+          } else {
+            // Not in staff collection — treat as admin (first-time setup)
+            currentRole = 'admin';
+            currentUser = { name: email.split('@')[0], email, role:'admin' };
+          }
+        }catch(e){
+          currentRole = _prefetchedRole || 'doctor';
+          currentUser = { name: email.split('@')[0], email };
+        }
+        btn.classList.remove('loading'); btn.disabled=false;
+        launchApp();
+      })
+      .catch(e=>{
+        btn.classList.remove('loading'); btn.disabled=false;
+        const msg = e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'
+          ? 'Incorrect email or password.'
+          : e.code==='auth/user-not-found'
+          ? 'No account found for this email.'
+          : e.code==='auth/too-many-requests'
+          ? 'Too many attempts — try again later.'
+          : e.message;
+        showLoginErr(msg);
+      });
+  } else {
+    // Demo mode
+    setTimeout(()=>{
+      btn.classList.remove('loading'); btn.disabled=false;
+      if(pw==='demo1234'){
+        currentRole = _prefetchedRole || 'doctor';
+        currentUser = { name: email.split('@')[0]||'Doctor', email };
+        launchApp();
+      } else {
+        showLoginErr('Demo mode: use password "demo1234"');
+      }
+    },700);
+  }
+}
+function showLoginErr(msg){
+  document.getElementById('loginErrTxt').textContent=msg;
+  document.getElementById('loginErr').classList.add('show');
+}
+function launchApp(){
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('appShell').classList.add('show');
+  initApp();
+}
+
+document.getElementById('loginBtn').addEventListener('click',doLogin);
+['loginEmail','loginPw'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  document.getElementById(id).addEventListener('input',()=>document.getElementById('loginErr').classList.remove('show'));
+});
+document.getElementById('logoutBtn').addEventListener('click',()=>{
+  if(window._FB&&window._FB.FB_READY) window._FB.signOut(window._FB.auth);
+  document.getElementById('appShell').classList.remove('show');
+  document.getElementById('loginPage').style.display='';
+  document.getElementById('loginEmail').value='';
+  document.getElementById('loginPw').value='';
+});
+
+// ══════════════════════════════════════
+//  SIDEBAR
+// ══════════════════════════════════════
+function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('sov').classList.add('show');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sov').classList.remove('show');}
+function buildNav(){
+  const nav=document.getElementById('sidebarNav');
+  const pages=ROLE_NAV[currentRole]||ROLE_NAV.doctor;
+  nav.innerHTML=`<div class="nsl">Navigation</div>`+
+    pages.map(p=>`<div class="ni${p==='dashboard'?' active':''}" data-page="${p}" onclick="navigate('${p}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${NAV_ICONS[p]||''}</svg>
+      ${NAV_LABELS[p]}
+      ${p==='patients'?`<span class="nb" id="patBadge">${PATIENTS.length}</span>`:''}
+    </div>`).join('');
+  // role badge
+  const rb=document.getElementById('uRoleBadge');
+  rb.textContent=cap(currentRole);
+  rb.className='rbadge '+currentRole;
+  // user name
+  const n=currentUser.name;
+  document.getElementById('uName').textContent=n.length>14?n.slice(0,14)+'…':n;
+  document.getElementById('uAvt').textContent=n.slice(0,2).toUpperCase();
+}
+
+// ══════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════
+const TITLES={dashboard:'Dashboard',patients:'Patients',appointments:'Appointments',prescriptions:'Prescriptions',billing:'Billing & Invoices',reminders:'WhatsApp Reminders',staff:'Staff & Accounts'};
+function navigate(page){
+  document.querySelectorAll('.ni').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg=document.getElementById('page-'+page);
+  if(pg) pg.classList.add('active');
+  document.getElementById('tbTitle').textContent=TITLES[page]||page;
+  closeSidebar();
+  if(page==='appointments') renderWeek();
+  if(page==='billing') renderBilling();
+  if(page==='prescriptions') renderRxList();
+  if(page==='reminders') renderReminders();
+  if(page==='staff') renderStaff();
+}
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+function initApp(){
+  buildNav();
+  const now=new Date();
+  document.getElementById('tbDate').textContent=now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  renderTodayList();
+  renderPGrid();
+  renderWeek();
+  renderBilling();
+  renderRxList();
+  populateSels();
+  document.getElementById('naDate').value=now.toISOString().split('T')[0];
+  document.getElementById('invDate').value=now.toISOString().split('T')[0];
+  document.getElementById('rxDate').value=now.toISOString().split('T')[0];
+  updateStats();
+  loadWAConfig();
+  // Firebase: try to load data
+  if(window._FB&&window._FB.FB_READY) loadFromFirebase();
+}
+
+function updateStats(){
+  document.getElementById('sPats').textContent=PATIENTS.length;
+  document.getElementById('sToday').textContent=APPOINTMENTS.filter(a=>a.date==='2026-02-25').length;
+  document.getElementById('sBill').textContent=INVOICES.filter(i=>i.status==='unpaid').length;
+  document.getElementById('sRx').textContent=PRESCRIPTIONS.filter(r=>r.date===new Date().toISOString().split('T')[0]).length||PRESCRIPTIONS.length;
+  const pb=document.getElementById('patBadge');
+  if(pb) pb.textContent=PATIENTS.length;
+  document.getElementById('patSub').textContent=PATIENTS.length+' active patients';
+}
+
+// ══════════════════════════════════════
+//  FIREBASE SYNC
+// ══════════════════════════════════════
+async function saveToFirebase(col, id, data){
+  if(!window._FB||!window._FB.FB_READY) return;
+  try{
+    const {db,doc,setDoc,serverTimestamp} = window._FB;
+    await setDoc(doc(db,col,id),{...data, updatedAt: serverTimestamp()});
+  }catch(e){console.warn('Firebase save error:',e);}
+}
+async function deleteFromFirebase(col, id){
+  if(!window._FB||!window._FB.FB_READY) return;
+  try{
+    const {db,doc,deleteDoc} = window._FB;
+    await deleteDoc(doc(db,col,id));
+  }catch(e){console.warn('Firebase delete error:',e);}
+}
+async function loadFromFirebase(){
+  if(!window._FB||!window._FB.FB_READY) return;
+  try{
+    const {db,collection,getDocs} = window._FB;
+    const snaps = await getDocs(collection(db,'patients'));
+    if(!snaps.empty){
+      PATIENTS = [];
+      snaps.forEach(d=>PATIENTS.push({...d.data(),id:d.id}));
+      renderPGrid(); updateStats();
+    }
+    const isnaps = await getDocs(collection(db,'invoices'));
+    if(!isnaps.empty){
+      INVOICES=[];
+      isnaps.forEach(d=>INVOICES.push({...d.data(),id:d.id}));
+      renderBilling();
+    }
+    const rxsnaps = await getDocs(collection(db,'prescriptions'));
+    if(!rxsnaps.empty){
+      PRESCRIPTIONS=[];
+      rxsnaps.forEach(d=>PRESCRIPTIONS.push({...d.data(),id:d.id}));
+      renderRxList();
+    }
+    showToast('Data loaded from Firebase');
+  }catch(e){console.warn('Firebase load:',e);}
+}
+
+// ══════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════
+function renderTodayList(){
+  const today='2026-02-25';
+  const list=document.getElementById('todayList');
+  const items=APPOINTMENTS.filter(a=>a.date===today).slice(0,5);
+  list.innerHTML=items.map(a=>{
+    const ini=a.patient.split(' ').map(w=>w[0]).join('').slice(0,2);
+    return`<li class="ai-item"><div class="at">${a.time}</div><div class="aa">${ini}</div><div class="ain"><div class="an">${a.patient}</div><div class="ar">${a.reason}</div></div><span class="sb s-${a.status}">${cap(a.status)}</span></li>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════
+//  PATIENTS
+// ══════════════════════════════════════
+let _fp=[...PATIENTS];
+function renderPGrid(list=_fp){
+  document.getElementById('pGrid').innerHTML=list.length?list.map(p=>`
+    <div class="pcard" onclick="openPat('${p.id}')">
+      <div class="pct">
+        <div class="pav ${p.color}">${ini(p.name)}</div>
+        <div><div class="pname">${p.name}</div><div class="pmeta">${p.age} yrs · ${p.gender}</div><div class="pid">${p.id}</div></div>
+      </div>
+      <div class="pdiag"><div class="pdl">Diagnosis</div>${p.diagnosis}</div>
+      <div class="pcf">
+        <div class="pvs"><span>${p.visits.length}</span> visits</div>
+        <div style="display:flex;gap:6px">
+          <button class="pbtn" onclick="event.stopPropagation();openEditPat('${p.id}')">Edit</button>
+          <button class="pbtn" style="color:var(--error)" onclick="event.stopPropagation();confirmDelete('${p.id}')">Delete</button>
+          <button class="pbtn" onclick="event.stopPropagation();openPat('${p.id}')">View →</button>
+        </div>
+      </div>
+    </div>`).join('')
+    :`<div style="grid-column:1/-1;text-align:center;padding:40px;font-size:.83rem;color:var(--muted)">No patients found</div>`;
+}
+function filterPats(q){
+  const base=filterCond==='all'?PATIENTS:PATIENTS.filter(p=>p.condition===filterCond);
+  _fp=base.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())||p.diagnosis.toLowerCase().includes(q.toLowerCase())||p.id.includes(q));
+  renderPGrid(_fp);
+}
+function filterBy(c,btn){
+  filterCond=c;
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  filterPats(document.getElementById('patSearch').value);
+}
+function confirmDelete(id){
+  const p=PATIENTS.find(x=>x.id===id);
+  if(!p)return;
+  pendingDeleteId=id;
+  document.getElementById('confirmMsg').textContent=`Delete "${p.name}" (${p.id})?`;
+  document.getElementById('confirmOkBtn').onclick=()=>doDeletePatient();
+  openModal('confirmModal');
+}
+function doDeletePatient(){
+  PATIENTS=PATIENTS.filter(p=>p.id!==pendingDeleteId);
+  APPOINTMENTS=APPOINTMENTS.filter(a=>a.patientId!==pendingDeleteId);
+  INVOICES=INVOICES.filter(i=>i.patientId!==pendingDeleteId);
+  PRESCRIPTIONS=PRESCRIPTIONS.filter(r=>r.patientId!==pendingDeleteId);
+  deleteFromFirebase('patients', pendingDeleteId);
+  filterPats(document.getElementById('patSearch').value);
+  populateSels();
+  updateStats();
+  closeModal('confirmModal');
+  showToast('Patient deleted');
+}
+function openAddPat(){
+  document.getElementById('patModalTi').textContent='Add New Patient';
+  document.getElementById('ePid').value='';
+  ['mName','mDob','mPhone','mEmail','mDiag','mIns','mInsNo','mImg'].forEach(id=>document.getElementById(id).value='');
+  openModal('patModal');
+}
+function openEditPat(id){
+  const p=PATIENTS.find(x=>x.id===id);if(!p)return;
+  document.getElementById('patModalTi').textContent='Edit Patient';
+  document.getElementById('ePid').value=id;
+  document.getElementById('mName').value=p.name;
+  document.getElementById('mDob').value=p.dob;
+  document.getElementById('mGender').value=p.gender;
+  document.getElementById('mPhone').value=p.phone;
+  document.getElementById('mEmail').value=p.email;
+  document.getElementById('mDiag').value=p.diagnosis;
+  document.getElementById('mCond').value=p.condition;
+  document.getElementById('mIns').value=p.insurance;
+  document.getElementById('mInsNo').value=p.insuranceNo;
+  document.getElementById('mImg').value=p.imaging;
+  openModal('patModal');
+}
+function savePat(){
+  const eid=document.getElementById('ePid').value;
+  const name=document.getElementById('mName').value.trim();
+  const dob=document.getElementById('mDob').value;
+  const diag=document.getElementById('mDiag').value.trim();
+  if(!name||!dob||!diag){showToast('Fill required fields (*)');return;}
+  const age=Math.floor((new Date()-new Date(dob))/31557600000);
+  if(eid){
+    const p=PATIENTS.find(x=>x.id===eid);
+    Object.assign(p,{name,dob,age,gender:v('mGender'),phone:v('mPhone'),email:v('mEmail'),diagnosis:diag,condition:v('mCond'),insurance:v('mIns'),insuranceNo:v('mInsNo'),imaging:v('mImg')||p.imaging});
+    saveToFirebase('patients',eid,p);
+    showToast('Patient updated');
+  }else{
+    const id='PT-'+String(PATIENTS.length+1).padStart(3,'0');
+    const p={id,name,dob,age,gender:v('mGender'),phone:v('mPhone'),email:v('mEmail'),diagnosis:diag,condition:v('mCond'),insurance:v('mIns'),insuranceNo:v('mInsNo'),imaging:v('mImg')||'Pending',color:COLORS[PATIENTS.length%5],notes:[],visits:[]};
+    PATIENTS.push(p);
+    saveToFirebase('patients',id,p);
+    showToast('Patient added: '+name);
+  }
+  closeModal('patModal');
+  filterPats(document.getElementById('patSearch').value);
+  populateSels();
+  updateStats();
+}
+
+// ══════════════════════════════════════
+//  PATIENT DETAIL PANEL
+// ══════════════════════════════════════
+function openPat(id){
+  currentPatId=id;
+  const p=PATIENTS.find(x=>x.id===id);if(!p)return;
+  // reset tabs
+  document.querySelectorAll('.dtab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  renderDTab('info',p);
+  document.getElementById('patOverlay').classList.add('show');
+}
+function switchDTab(tab,btn){
+  document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  const p=PATIENTS.find(x=>x.id===currentPatId);
+  if(p) renderDTab(tab,p);
+}
+function renderDTab(tab,p){
+  const body=document.getElementById('dpb');
+  if(tab==='info'){
+    body.innerHTML=`<div class="dp-tab active">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+        <div class="pav ${p.color}" style="width:48px;height:48px;border-radius:12px;font-size:1rem;flex-shrink:0">${ini(p.name)}</div>
+        <div><div style="font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:600;color:var(--navy)">${p.name}</div><div style="font-size:.73rem;color:var(--muted);margin-top:2px">${p.id} · ${p.age} yrs · ${p.gender}</div></div>
+      </div>
+      <div class="ds"><div class="dst">Personal</div>
+        <div class="dgr">
+          <div class="df"><label>Date of Birth</label><p class="hi">${fmtD(p.dob)}</p></div>
+          <div class="df"><label>Phone</label><p>${p.phone}</p></div>
+          <div class="df" style="grid-column:1/-1"><label>Email</label><p>${p.email}</p></div>
+        </div>
+      </div>
+      <div class="ds"><div class="dst">Clinical</div>
+        <div class="dgr">
+          <div class="df" style="grid-column:1/-1"><label>Diagnosis</label><p class="hi">${p.diagnosis}</p></div>
+          <div class="df" style="grid-column:1/-1"><label>Imaging</label><p>${p.imaging}</p></div>
+        </div>
+      </div>
+      <div class="ds"><div class="dst">Insurance</div>
+        <div class="dgr">
+          <div class="df"><label>Provider</label><p class="hi">${p.insurance}</p></div>
+          <div class="df"><label>Policy</label><p>${p.insuranceNo}</p></div>
+        </div>
+      </div>
+      <div class="ds"><div class="dst">Visits</div>
+        ${p.visits.map(vi=>`<div class="vi"><div class="vdb"><div class="vd">${vi.day}</div><div class="vm">${vi.mon}</div></div><div><div class="vi-type">${vi.type}</div><div class="vi-note">${vi.note}</div></div></div>`).join('')||'<p style="font-size:.78rem;color:var(--muted)">No visits recorded.</p>'}
+      </div>
+    </div>`;
+  }
+  if(tab==='notes'){
+    body.innerHTML=`<div class="dp-tab active">
+      ${p.notes.length?p.notes.map(n=>`<div class="note-item"><div class="nitem-hd"><span class="nitem-date">${n.date}</span><span class="nitem-type">${n.type}</span></div><div class="nitem-text">${n.text}</div></div>`).join(''):'<p style="font-size:.78rem;color:var(--muted);margin-bottom:14px">No notes yet.</p>'}
+      <div style="margin-top:8px">
+        <div class="mf"><label>Note Type</label><select id="nType"><option>Consultation</option><option>Follow-up</option><option>Pre-op</option><option>Review</option><option>Procedure</option></select></div>
+        <div class="mf"><label>Note</label><textarea id="nText" placeholder="Enter clinical note…" style="min-height:80px"></textarea></div>
+        <div style="display:flex;gap:7px">
+          <button class="btn-save" style="flex:1;padding:9px" onclick="saveNote('${p.id}')">Save Note</button>
+          <button class="exp-btn" onclick="openAIForPat('${p.id}')">AI Help</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  if(tab==='imaging'){
+    body.innerHTML=`<div class="dp-tab active">
+      <div style="font-size:.76rem;color:var(--muted);margin-bottom:12px">Imaging files for ${p.name}</div>
+      <div class="ds"><div class="dst">Imaging Report</div>
+        <div style="background:var(--ice2);border-radius:8px;padding:11px;font-size:.79rem;color:var(--text);line-height:1.6;border-left:3px solid var(--blue);margin-bottom:14px">${p.imaging}</div>
+      </div>
+      <div class="ds"><div class="dst">Upload Files</div>
+        <div class="upload-zone" id="imgDropZone" onclick="triggerFileInput('${p.id}')">
+          <input type="file" id="imgFileInput_${p.id}" multiple accept="image/*,.pdf,.dcm"
+            onchange="handleFileUpload(event,'${p.id}','imaging')"
+            ondragover="event.preventDefault();document.getElementById('imgDropZone').classList.add('drag')"
+            ondragleave="document.getElementById('imgDropZone').classList.remove('drag')"
+            ondrop="document.getElementById('imgDropZone').classList.remove('drag')"/>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+          <p><strong>Click to upload</strong> or drag & drop<br>X-ray, MRI, CT, PDF — any size</p>
+        </div>
+        <div id="uploadProg_${p.id}" style="display:none">
+          <div class="prog-wrap"><div class="prog-bar" id="progBar_${p.id}"></div></div>
+          <div style="font-size:.73rem;color:var(--muted);text-align:center" id="progTxt_${p.id}">Uploading…</div>
+        </div>
+      </div>
+      <div class="ds"><div class="dst">Stored Files</div>
+        <div class="file-list" id="fileList_${p.id}">
+          <div style="font-size:.76rem;color:var(--muted);padding:6px 0" id="fileListLoading_${p.id}">Loading files…</div>
+        </div>
+      </div>
+    </div>`;
+    loadPatientFiles('${p.id}');
+  }
+  if(tab==='rx'){
+    const pRx=PRESCRIPTIONS.filter(r=>r.patientId===p.id);
+    body.innerHTML=`<div class="dp-tab active">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:.83rem;font-weight:500;color:var(--navy)">Prescriptions (${pRx.length})</div>
+        <button class="btn-add" style="padding:7px 13px;font-size:.75rem" onclick="openRxForPat('${p.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Rx</button>
+      </div>
+      ${pRx.length?pRx.map(rx=>`
+        <div class="rx-item">
+          <div class="rx-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+          <div class="rx-info">
+            <div class="rx-drug">${rx.id} — ${rx.diagnosis}</div>
+            <div class="rx-detail">${rx.drugs.map(d=>`${d.name} ${d.dose}, ${d.frequency}`).join(' · ')}</div>
+            <div class="rx-date">${rx.date} · Follow-up: ${rx.followup}</div>
+            <div class="rx-actions"><button class="bil-print" onclick="printRx('${rx.id}')">Print Rx</button></div>
+          </div>
+        </div>`).join(''):'<p style="font-size:.78rem;color:var(--muted)">No prescriptions on file.</p>'}
+    </div>`;
+  }
+  if(tab==='billing'){
+    const pInv=INVOICES.filter(i=>i.patientId===p.id);
+    body.innerHTML=`<div class="dp-tab active">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:.83rem;font-weight:500;color:var(--navy)">Invoices (${pInv.length})</div>
+        <button class="btn-add" style="padding:7px 13px;font-size:.75rem" onclick="openNewInvoice('${p.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Invoice</button>
+      </div>
+      ${pInv.length?pInv.map(inv=>`
+        <div style="background:var(--ice2);border-radius:9px;padding:11px 13px;margin-bottom:8px;border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div><div style="font-size:.8rem;font-weight:500;color:var(--navy)">${inv.id} — ${inv.service}</div><div style="font-size:.72rem;color:var(--muted);margin-top:2px">${inv.date} · EGP ${inv.egp.toLocaleString()} / USD ${inv.usd}</div></div>
+          <div style="display:flex;align-items:center;gap:6px"><span class="sb s-${inv.status}">${cap(inv.status)}</span><button class="bil-view" onclick="viewInvoice('${inv.id}')">View</button></div>
+        </div>`).join(''):'<p style="font-size:.78rem;color:var(--muted)">No invoices on file.</p>'}
+    </div>`;
+  }
+}
+function saveNote(pid){
+  const p=PATIENTS.find(x=>x.id===pid);
+  const type=v('nType'), text=document.getElementById('nText').value.trim();
+  if(!text){showToast('Enter a note first.');return;}
+  const today=new Date().toISOString().split('T')[0];
+  p.notes.unshift({date:today,type,text});
+  p.visits.unshift({day:String(new Date().getDate()).padStart(2,'0'),mon:new Date().toLocaleString('en-US',{month:'short'}),type,note:text.slice(0,60)+'…'});
+  saveToFirebase('patients',pid,p);
+  renderDTab('notes',p);
+  showToast('Note saved');
+}
+function closePat(e){if(e.target===document.getElementById('patOverlay')) closePatDirect();}
+function closePatDirect(){document.getElementById('patOverlay').classList.remove('show');}
+function printPat(){
+  const p=PATIENTS.find(x=>x.id===currentPatId);if(!p)return;
+  document.getElementById('patPrintArea').innerHTML=`
+    <h1>${p.name}</h1><div class="pr-meta">${p.id} · ${p.age} yrs · ${p.gender} · ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</div>
+    <div class="pr-sec"><h2>Personal</h2><div class="pr-grid"><div class="pr-field"><label>DOB</label><p>${fmtD(p.dob)}</p></div><div class="pr-field"><label>Phone</label><p>${p.phone}</p></div><div class="pr-field"><label>Email</label><p>${p.email}</p></div></div></div>
+    <div class="pr-sec"><h2>Clinical</h2><div class="pr-field"><label>Diagnosis</label><p>${p.diagnosis}</p></div><div class="pr-field" style="margin-top:8px"><label>Imaging</label><p>${p.imaging}</p></div></div>
+    <div class="pr-sec"><h2>Insurance</h2><div class="pr-grid"><div class="pr-field"><label>Provider</label><p>${p.insurance}</p></div><div class="pr-field"><label>Policy</label><p>${p.insuranceNo}</p></div></div></div>
+    <div class="pr-sec"><h2>Notes</h2>${p.notes.map(n=>`<div style="margin-bottom:10px;padding:8px;background:#f4f9ff;border-radius:6px"><strong>${n.date} — ${n.type}</strong><br>${n.text}</div>`).join('')||'None recorded.'}</div>`;
+  window.print();
+}
+
+// ══════════════════════════════════════
+//  APPOINTMENTS
+// ══════════════════════════════════════
+const DOWS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function getWeekDays(off){
+  const base=new Date('2026-02-23');
+  base.setDate(base.getDate()+off*7);
+  return Array.from({length:5},(_,i)=>{const d=new Date(base);d.setDate(d.getDate()+i);return d;});
+}
+function changeWeek(d){weekOffset+=d;renderWeek();}
+function renderWeek(){
+  const days=getWeekDays(weekOffset);
+  const today='2026-02-25';
+  document.getElementById('weekLabel').textContent=`${days[0].getDate()} ${MONS[days[0].getMonth()]} – ${days[4].getDate()} ${MONS[days[4].getMonth()]} ${days[0].getFullYear()}`;
+  document.getElementById('apptSub').textContent=`Week of ${days[0].getDate()} ${MONS[days[0].getMonth()]}`;
+  const mob=window.innerWidth<768, show=mob?days.slice(0,3):days;
+  const cols=document.getElementById('weekCols');
+  cols.style.gridTemplateColumns=`repeat(${show.length},1fr)`;
+  cols.innerHTML=show.map(d=>{
+    const ds=d.toISOString().split('T')[0],isT=ds===today;
+    const da=APPOINTMENTS.filter(a=>a.date===ds).sort((a,b)=>a.time.localeCompare(b.time));
+    return`<div><div class="dch${isT?' today':''}"><div class="dow">${DOWS[d.getDay()]}</div><div class="dd">${d.getDate()}</div></div>
+      ${da.map(a=>`<div class="ablk ${a.status}"><div class="abt">${a.time}</div><div class="abn">${a.patient.split(' ')[0]} ${a.patient.split(' ').slice(-1)[0]}</div><div class="abr">${a.reason}</div><div class="abd">${a.duration}m · ${cap(a.status)}</div></div>`).join('')}
+      ${!da.length?'<div style="text-align:center;font-size:.68rem;color:var(--muted2);padding:10px 0">—</div>':''}
+    </div>`;
+  }).join('');
+}
+function addAppt(){
+  const pid=v('naPat'),reason=v('naReason').trim(),date=v('naDate'),time=v('naTime');
+  if(!pid||!reason||!date||!time){showToast('Fill all fields');return;}
+  const pat=PATIENTS.find(p=>p.id===pid);
+  const a={id:'A'+String(APPOINTMENTS.length+1).padStart(2,'0'),patientId:pid,patient:pat.name,reason,date,time,duration:parseInt(v('naDur')),status:v('naStatus')};
+  APPOINTMENTS.push(a);
+  renderWeek();renderTodayList();updateStats();
+  document.getElementById('naPat').value='';
+  document.getElementById('naReason').value='';
+  document.getElementById('naTime').value='';
+  showToast('Scheduled: '+pat.name);
+}
+function sendBulkReminders(){
+  const today=APPOINTMENTS.filter(a=>a.date==='2026-02-25');
+  const waBase=`https://wa.me/`;
+  const waToken=document.getElementById('waToken')?.value||'';
+  if(!waToken){
+    showToast(`📱 Demo: Would send ${today.length} WhatsApp reminders`);
+    return;
+  }
+  today.forEach(a=>{
+    const pat=PATIENTS.find(p=>p.id===a.patientId);
+    if(pat&&pat.phone){
+      const msg=encodeURIComponent(`Dear ${pat.name.split(' ')[0]}, reminder: appointment today at ${a.time} for ${a.reason}. Reply CONFIRM or CANCEL. — OrthoAssist`);
+      const phone=pat.phone.replace(/\D/g,'');
+      console.log(`Sending to ${phone}: WA Business API call`);
+    }
+  });
+  showToast(`Reminders queued for ${today.length} patients`);
+}
+
+// ══════════════════════════════════════
+//  BILLING
+// ══════════════════════════════════════
+function calcUSD(){
+  const egp=parseFloat(document.getElementById('invEGP').value)||0;
+  const tax=parseFloat(document.getElementById('invTax').value)||0;
+  const total=egp*(1+tax/100);
+  document.getElementById('invUSD').value=(total*EGP_USD).toFixed(2);
+}
+function openNewInvoice(prePatId){
+  document.getElementById('invModalTi').textContent='New Invoice';
+  if(prePatId) document.getElementById('invPat').value=prePatId;
+  document.getElementById('invService').value='';
+  document.getElementById('invEGP').value='';
+  document.getElementById('invUSD').value='';
+  document.getElementById('invNotes').value='';
+  document.getElementById('invStatus').value='unpaid';
+  openModal('invoiceModal');
+}
+function saveInvoice(){
+  const pid=v('invPat'),svc=v('invService').trim(),egp=parseFloat(v('invEGP'));
+  if(!pid||!svc||!egp){showToast('Fill required fields');return;}
+  const pat=PATIENTS.find(p=>p.id===pid);
+  const tax=parseFloat(v('invTax'))||0;
+  const total=egp*(1+tax/100);
+  const id='INV-'+String(INVOICES.length+1).padStart(3,'0');
+  const inv={id,patientId:pid,patient:pat.name,service:svc,egp:total.toFixed(0),usd:(total*EGP_USD).toFixed(2),date:v('invDate'),status:v('invStatus'),notes:v('invNotes'),tax};
+  INVOICES.push(inv);
+  saveToFirebase('invoices',id,inv);
+  renderBilling();
+  updateStats();
+  closeModal('invoiceModal');
+  showToast('Invoice created: '+id);
+}
+function renderBilling(){
+  const tbody=document.getElementById('billBody');
+  if(!tbody) return;
+  tbody.innerHTML=INVOICES.map(inv=>`
+    <tr>
+      <td><strong>${inv.id}</strong></td>
+      <td>${inv.patient}</td>
+      <td>${inv.service}</td>
+      <td>EGP ${Number(inv.egp).toLocaleString()}</td>
+      <td>$ ${inv.usd}</td>
+      <td>${inv.date}</td>
+      <td><span class="sb s-${inv.status}">${cap(inv.status)}</span></td>
+      <td><div class="bil-actions">
+        <button class="bil-view" onclick="viewInvoice('${inv.id}')">View</button>
+        <button class="bil-print" onclick="viewAndPrintInv('${inv.id}')">Print</button>
+        <button class="bil-wa" onclick="sendInvWA('${inv.id}')">WA</button>
+      </div></td>
+    </tr>`).join('');
+}
+function viewInvoice(id){
+  currentInvId=id;
+  const inv=INVOICES.find(x=>x.id===id);if(!inv)return;
+  const pat=PATIENTS.find(p=>p.id===inv.patientId)||{name:inv.patient,phone:'—',email:'—'};
+  const tax=inv.tax||14;
+  const base=(inv.egp/(1+tax/100)).toFixed(0);
+  document.getElementById('invViewBody').innerHTML=`
+    <div class="inv-hd">
+      <div class="inv-brand"><div class="inv-name">OrthoAssist</div><div class="inv-sub">Orthopedic Practice Management</div><div style="font-size:.73rem;color:var(--muted);margin-top:4px">Cairo, Egypt</div></div>
+      <div class="inv-meta">
+        <div>Invoice <strong>#${inv.id}</strong></div>
+        <div>Date: <strong>${inv.date}</strong></div>
+        <div>Status: <strong>${cap(inv.status)}</strong></div>
+      </div>
+    </div>
+    <div class="inv-parties">
+      <div><div class="inv-party-label">From</div><div class="inv-party-name">OrthoAssist Clinic</div><div class="inv-party-detail">Dr. ${currentUser.name||'Physician'}<br>Orthopedic Surgery<br>Cairo, Egypt</div></div>
+      <div><div class="inv-party-label">To</div><div class="inv-party-name">${pat.name}</div><div class="inv-party-detail">${pat.phone}<br>${pat.email}</div></div>
+    </div>
+    <table class="inv-items">
+      <thead><tr><th>Service / Procedure</th><th>Base (EGP)</th><th>Tax ${tax}%</th><th>Total (EGP)</th></tr></thead>
+      <tbody><tr><td>${inv.service}</td><td>${Number(base).toLocaleString()}</td><td>${(inv.egp-base).toLocaleString()}</td><td>${Number(inv.egp).toLocaleString()}</td></tr></tbody>
+    </table>
+    <div class="inv-totals">
+      <div class="inv-total-row"><span>Subtotal (EGP)</span><span>${Number(base).toLocaleString()}</span></div>
+      <div class="inv-total-row"><span>VAT ${tax}%</span><span>${(inv.egp-base).toLocaleString()}</span></div>
+      <div class="inv-total-row grand"><span>Total</span><span>EGP ${Number(inv.egp).toLocaleString()} / USD ${inv.usd}</span></div>
+    </div>
+    ${inv.notes?`<div style="margin-bottom:14px"><div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px">Notes</div><div style="font-size:.79rem;color:var(--text)">${inv.notes}</div></div>`:''}
+    <div class="inv-footer-note">
+      شكراً لثقتكم — Thank you for your trust<br>
+      <div class="inv-ar">مستشفى OrthoAssist — القاهرة، مصر</div>
+    </div>`;
+  openModal('invViewModal');
+}
+function printInvoice(){
+  const inv=INVOICES.find(x=>x.id===currentInvId);if(!inv)return;
+  const body=document.getElementById('invViewBody').innerHTML;
+  document.getElementById('invPrintArea').innerHTML=`<div class="inv-wrap">${body}</div>`;
+  closeModal('invViewModal');
+  setTimeout(()=>window.print(),100);
+}
+function viewAndPrintInv(id){currentInvId=id;viewInvoice(id);setTimeout(()=>printInvoice(),500);}
+function sendInvWA(id){
+  const inv=INVOICES.find(x=>x.id===id);if(!inv)return;
+  const pat=PATIENTS.find(p=>p.id===inv.patientId);
+  const phone=(pat?.phone||'').replace(/\D/g,'');
+  const msg=`Dear ${inv.patient}, your invoice ${inv.id} for ${inv.service} amounts to EGP ${Number(inv.egp).toLocaleString()} (USD ${inv.usd}). Status: ${cap(inv.status)}. — OrthoAssist`;
+  if(phone) window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
+  else showToast('No phone number for this patient');
+}
+function sendInvoiceWA(){sendInvWA(currentInvId);}
+function exportApptCSV(){
+  const rows=[['ID','Patient','Reason','Date','Time','Duration','Status']];
+  APPOINTMENTS.forEach(a=>rows.push([a.id,a.patient,a.reason,a.date,a.time,a.duration,a.status]));
+  dlCSV(rows,'appointments.csv');
+  showToast('Appointments exported');
+}
+function exportPatCSV(){
+  const rows=[['ID','Name','DOB','Age','Gender','Phone','Email','Diagnosis','Insurance']];
+  PATIENTS.forEach(p=>rows.push([p.id,p.name,p.dob,p.age,p.gender,p.phone,p.email,p.diagnosis,p.insurance]));
+  dlCSV(rows,'patients.csv');
+  showToast('Patients exported');
+}
+function dlCSV(rows,fn){
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=fn;a.click();
+}
+
+// ══════════════════════════════════════
+//  PRESCRIPTIONS
+// ══════════════════════════════════════
+function openNewRx(){rxRows=0;document.getElementById('rxDrugList').innerHTML='';addRxRow();document.getElementById('rxPat').value='';document.getElementById('rxDiag').value='';document.getElementById('rxNotes').value='';openModal('rxModal');}
+function openRxForPat(pid){openNewRx();document.getElementById('rxPat').value=pid;const p=PATIENTS.find(x=>x.id===pid);if(p)document.getElementById('rxDiag').value=p.diagnosis;}
+function addRxRow(){
+  rxRows++;
+  const div=document.createElement('div');
+  div.id=`rxrow${rxRows}`;
+  div.style.cssText='background:var(--ice2);border-radius:8px;padding:10px 12px;margin-bottom:8px;border:1px solid var(--border)';
+  div.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:.72rem;font-weight:500;color:var(--navy)">Medication ${rxRows}</div>
+      <button onclick="document.getElementById('rxrow${rxRows}').remove()" style="background:none;border:none;cursor:pointer;color:var(--error);font-size:.72rem">✕ Remove</button>
+    </div>
+    <div class="mrow" style="margin-bottom:8px"><div class="mf" style="margin:0"><label>Drug Name *</label><input type="text" id="rxn${rxRows}" placeholder="e.g. Celecoxib"/></div><div class="mf" style="margin:0"><label>Dose *</label><input type="text" id="rxd${rxRows}" placeholder="e.g. 200mg"/></div></div>
+    <div class="mrow"><div class="mf" style="margin:0"><label>Frequency</label><select id="rxf${rxRows}"><option>Once daily</option><option>Twice daily</option><option>Three times daily</option><option>As needed</option><option>Weekly</option></select></div><div class="mf" style="margin:0"><label>Duration</label><input type="text" id="rxdu${rxRows}" placeholder="e.g. 30 days"/></div></div>
+    <div class="mf" style="margin-top:8px;margin-bottom:0"><label>Refills</label><select id="rxr${rxRows}"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>`;
+  document.getElementById('rxDrugList').appendChild(div);
+}
+function saveRx(){
+  const pid=v('rxPat');if(!pid){showToast('Select patient');return;}
+  const drugs=[];
+  document.querySelectorAll('[id^="rxrow"]').forEach(row=>{
+    const n=row.id.replace('rxrow','');
+    const name=v(`rxn${n}`);
+    if(name) drugs.push({name,dose:v(`rxd${n}`),frequency:v(`rxf${n}`),duration:v(`rxdu${n}`),refills:v(`rxr${n}`)});
+  });
+  if(!drugs.length){showToast('Add at least one medication');return;}
+  const id='RX-'+String(PRESCRIPTIONS.length+1).padStart(3,'0');
+  const pat=PATIENTS.find(p=>p.id===pid);
+  const rx={id,patientId:pid,patient:pat.name,diagnosis:v('rxDiag')||pat.diagnosis,drugs,date:v('rxDate'),followup:v('rxFollowup')||'',notes:v('rxNotes')};
+  PRESCRIPTIONS.push(rx);
+  saveToFirebase('prescriptions',id,rx);
+  renderRxList();updateStats();
+  closeModal('rxModal');
+  showToast('Prescription issued: '+id);
+}
+function renderRxList(){
+  const el=document.getElementById('rxList');if(!el)return;
+  el.innerHTML=PRESCRIPTIONS.map(rx=>`
+    <div class="rx-item">
+      <div class="rx-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+      <div class="rx-info">
+        <div class="rx-drug">${rx.id} — ${rx.patient}</div>
+        <div style="font-size:.72rem;color:var(--blue);margin-bottom:3px">${rx.diagnosis}</div>
+        <div class="rx-detail">${rx.drugs.map(d=>`<strong>${d.name}</strong> ${d.dose} · ${d.frequency}`).join('<br>')}</div>
+        <div class="rx-date" style="margin-top:4px">Issued: ${rx.date} ${rx.followup?`· Follow-up: ${rx.followup}`:''}</div>
+        <div class="rx-actions"><button class="bil-print" onclick="printRx('${rx.id}')">Print Rx</button><button class="bil-wa" onclick="sendRxWA('${rx.id}')">WA</button></div>
+      </div>
+    </div>`).join('')||'<p style="font-size:.8rem;color:var(--muted);padding:12px">No prescriptions yet.</p>';
+}
+function printRx(id){
+  const rx=PRESCRIPTIONS.find(x=>x.id===id);if(!rx)return;
+  document.getElementById('rxPrintArea').innerHTML=`
+    <div class="rx-phead">
+      <div><div class="rx-pname">OrthoAssist — Prescription</div><div class="rx-pdetail">Orthopedic Practice · Cairo, Egypt<br>Dr. ${currentUser.name||'Physician'} — Orthopedic Surgeon</div></div>
+      <div class="rx-pdate">Rx#: ${rx.id}<br>Date: ${rx.date}<br>${rx.followup?'Follow-up: '+rx.followup:''}</div>
+    </div>
+    <div class="rx-pat-info">
+      <div><label>Patient</label><p>${rx.patient}</p></div>
+      <div><label>Diagnosis</label><p>${rx.diagnosis}</p></div>
+      <div><label>Date of Rx</label><p>${rx.date}</p></div>
+    </div>
+    <ul class="rx-drug-list">
+      ${rx.drugs.map((d,i)=>`<li><strong>${i+1}. ${d.name} ${d.dose}</strong><br>Take: ${d.frequency} for ${d.duration}${d.refills>0?` · Refills: ${d.refills}`:''}</li>`).join('')}
+    </ul>
+    ${rx.notes?`<p style="font-size:.8rem;color:#1a2e42;border-top:1px solid #ddeaf6;padding-top:10px">Notes: ${rx.notes}</p>`:''}
+    <div class="rx-sig">
+      <div><div class="rx-sig-line">Patient Signature</div></div>
+      <div><div class="rx-sig-line">Dr. ${currentUser.name||'Physician'} — Signature & Stamp</div></div>
+    </div>`;
+  window.print();
+}
+function sendRxWA(id){
+  const rx=PRESCRIPTIONS.find(x=>x.id===id);if(!rx)return;
+  const pat=PATIENTS.find(p=>p.id===rx.patientId);
+  const phone=(pat?.phone||'').replace(/\D/g,'');
+  const msg=`Dear ${rx.patient}, your prescription ${rx.id}:\n${rx.drugs.map(d=>`• ${d.name} ${d.dose} — ${d.frequency}`).join('\n')}\n${rx.notes?'\nNotes: '+rx.notes:''}\n— OrthoAssist`;
+  if(phone) window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
+  else showToast('No phone number on file');
+}
+
+// ══════════════════════════════════════
+//  REMINDERS
+// ══════════════════════════════════════
+function saveWAConfig(){showToast('WhatsApp config saved');}
+function renderReminders(){
+  const el=document.getElementById('remindersList');if(!el)return;
+  const today=APPOINTMENTS.filter(a=>a.date==='2026-02-25');
+  el.innerHTML=today.map(a=>{
+    const pat=PATIENTS.find(p=>p.id===a.patientId);
+    return`<div class="rem-card">
+      <div class="rem-icon wa"><svg viewBox="0 0 24 24" fill="white" width="18" height="18"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.549 4.12 1.51 5.856L0 24l6.336-1.479A11.953 11.953 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.887 0-3.659-.515-5.181-1.414l-.371-.22-3.762.877.904-3.662-.241-.38A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg></div>
+      <div class="rem-info">
+        <div class="rem-title">${a.patient} — ${a.time}</div>
+        <div class="rem-detail">${a.reason} · ${pat?.phone||'No phone'}</div>
+      </div>
+      <button class="rem-send wa" onclick="sendSingleReminder('${a.id}')">Send</button>
+    </div>`;
+  }).join('')||'<p style="font-size:.8rem;color:var(--muted)">No appointments today.</p>';
+}
+function sendSingleReminder(aid){
+  const a=APPOINTMENTS.find(x=>x.id===aid);if(!a)return;
+  const pat=PATIENTS.find(p=>p.id===a.patientId);
+  const phone=(pat?.phone||'').replace(/\D/g,'');
+  const msg=`Dear ${a.patient.split(' ')[0]}, reminder: your appointment is today at ${a.time} for ${a.reason}. Reply CONFIRM or CANCEL. — OrthoAssist`;
+  if(phone) window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
+  else showToast('No phone number for this patient');
+}
+
+// ══════════════════════════════════════
+//  STAFF
+// ══════════════════════════════════════
+function renderStaff(){
+  const el=document.getElementById('staffGrid');if(!el)return;
+  el.innerHTML=STAFF.map(s=>`
+    <div class="staff-card">
+      <div class="staff-top">
+        <div class="staff-av ${s.role.slice(0,2)}">${ini(s.name)}</div>
+        <div><div class="staff-name">${s.name}</div><div class="staff-email">${s.email}</div></div>
+      </div>
+      <div style="font-size:.74rem;color:var(--muted);margin-bottom:10px">${s.spec}</div>
+      <div class="staff-footer">
+        <span class="rbadge ${s.role}">${cap(s.role)}</span>
+        <div class="staff-actions">
+          <button style="background:rgba(59,158,255,.1);color:var(--blue)" onclick="showToast('Edit staff — coming next layer')">Edit</button>
+          <button style="background:rgba(214,64,69,.1);color:var(--error)" onclick="showToast('Remove staff — coming next layer')">Remove</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+function openAddStaff(){
+  ['sName','sEmail','sPhone','sSpec','sPw','sPw2'].forEach(id=>document.getElementById(id).value='');
+  openModal('staffModal');
+}
+function saveStaff(){
+  const name=v('sName'),email=v('sEmail'),role=v('sRole'),pw=v('sPw'),pw2=v('sPw2');
+  if(!name||!email||!pw){showToast('Fill required fields');return;}
+  if(pw!==pw2){showToast('Passwords do not match');return;}
+  if(pw.length<6){showToast('Password min 6 characters');return;}
+  const id='S-'+String(STAFF.length+1).padStart(3,'0');
+  const s={id,name,role,email,phone:v('sPhone'),spec:v('sSpec')};
+  STAFF.push(s);
+  // Firebase auth create
+  if(window._FB&&window._FB.FB_READY){
+    window._FB.createUserWithEmailAndPassword(window._FB.auth,email,pw)
+      .then(()=>{
+        saveToFirebase('staff',id,{...s,role});
+        showToast('Staff account created in Firebase');
+      }).catch(e=>showToast('Firebase: '+e.message));
+  }else{
+    showToast('Staff added (demo): '+name);
+  }
+  renderStaff();
+  closeModal('staffModal');
+}
+
+// ══════════════════════════════════════
+//  AI ASSISTANT
+// ══════════════════════════════════════
+function openAI(){document.getElementById('aiPanel').classList.add('show');}
+function closeAI(){document.getElementById('aiPanel').classList.remove('show');}
+function setAIMode(m,btn){aiMode=m;document.querySelectorAll('.aimode').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+function aiPatChange(){
+  const pid=v('aiPat');
+  if(pid){const p=PATIENTS.find(x=>x.id===pid);addAIMsg('ai',`Patient: <strong>${p.name}</strong> (${p.age}y, ${p.gender})<br>Dx: ${p.diagnosis}<br>Ready to assist.`);}
+}
+function openAIForPat(pid){document.getElementById('aiPat').value=pid;aiPatChange();openAI();}
+function aiQ(prompt){document.getElementById('aiInp').value=prompt;aiSend();}
+function aiKD(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();aiSend();}}
+function addAIMsg(role,html){
+  const chat=document.getElementById('aiChat');
+  const div=document.createElement('div');
+  div.className='aimsg '+role;div.innerHTML=html;
+  chat.appendChild(div);chat.scrollTop=chat.scrollHeight;
+  return div;
+}
+function aiSend(){
+  const inp=document.getElementById('aiInp');
+  const msg=inp.value.trim();if(!msg)return;
+  const pid=v('aiPat');
+  addAIMsg('user',msg);inp.value='';
+  const thinking=addAIMsg('ai','<span class="pulse">Thinking…</span>');
+  setTimeout(()=>{
+    thinking.remove();
+    const pat=pid?PATIENTS.find(x=>x.id===pid):null;
+    addAIMsg('ai',genAIResp(msg,pat,aiMode));
+  },900+Math.random()*600);
+}
+function genAIResp(msg,pat,mode){
+  const ml=msg.toLowerCase();
+  if(!pat){
+    if(ml.includes('soap')) return`<strong>SOAP Template:</strong><br><br><strong>S:</strong> Chief complaint, duration, severity<br><strong>O:</strong> Vitals, ROM, special tests<br><strong>A:</strong> Diagnosis, severity<br><strong>P:</strong> Treatment, follow-up<br><br><em>Select a patient for personalised note.</em>`;
+    return`Please select a patient first.`;
+  }
+  const ln=pat.notes[0];
+  if(mode==='rx'||ml.includes('medic')||ml.includes('prescri')||ml.includes('rx')){
+    const rxMap={knee:'Celecoxib 200mg OD, Omeprazole 20mg OD (GI protection), Physiotherapy 3x/week',spine:'Gabapentin 300mg TID, Methocarbamol 750mg TID (muscle relaxant), Physiotherapy',shoulder:'Naproxen 500mg BD, Physiotherapy + rotator cuff exercises'};
+    return`<strong>Suggested medications for ${pat.name}:</strong><br><br>${rxMap[pat.condition]||'NSAIDs, Physiotherapy, pain management'}<br><br><em>Always verify against patient allergies and contraindications.</em>`;
+  }
+  if(mode==='summary'||ml.includes('summar')||ml.includes('history')){
+    return`<strong>Summary — ${pat.name}</strong><br><br>${pat.name} (${pat.age}y, ${pat.gender}) presents with <strong>${pat.diagnosis}</strong>. ${pat.visits.length} visits recorded. ${ln?`Latest note (${ln.date}): "${ln.text.slice(0,100)}…"`:'No notes.'}<br><br>Imaging: ${pat.imaging}.`;
+  }
+  if(ml.includes('soap')){
+    return`<strong>SOAP — ${pat.name}</strong><br><br><strong>S:</strong> ${pat.age}y ${pat.gender.toLowerCase()} with ${pat.diagnosis}. ${ln?ln.text.slice(0,80)+'…':'Presents for follow-up.'}<br><strong>O:</strong> Examination findings per clinical assessment.<br><strong>A:</strong> ${pat.diagnosis}.<br><strong>P:</strong> Continue current plan. Review in 4 weeks.`;
+  }
+  if(ml.includes('referral')){
+    return`<strong>Referral — ${pat.name}</strong><br><br>Dear Colleague,<br>I refer this ${pat.age}y ${pat.gender.toLowerCase()} with <strong>${pat.diagnosis}</strong> for your expert opinion. ${pat.imaging}.<br>${ln?`Recent note: "${ln.text.slice(0,100)}…"`:'Please see records.'}<br><br>Thank you.`;
+  }
+  return`For <strong>${pat.name}</strong> (${pat.diagnosis}):<br>${ln?`Last note: "${ln.text.slice(0,120)}…"`:'No notes.'}<br><br>Use quick prompts above or ask me to draft a SOAP note, treatment plan, or referral.`;
+}
+
+// ══════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════
+function populateSels(){
+  ['naPat','invPat','rxPat','aiPat'].forEach(selId=>{
+    const sel=document.getElementById(selId);if(!sel)return;
+    const cur=sel.value,first=sel.options[0];
+    sel.innerHTML='';sel.appendChild(first);
+    PATIENTS.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;sel.appendChild(o);});
+    if(cur) sel.value=cur;
+  });
+}
+function openModal(id){document.getElementById(id).classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+function v(id){const el=document.getElementById(id);return el?el.value:'';}
+function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):'';}
+function ini(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function fmtD(s){return s?new Date(s).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'—';}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+document.getElementById('gSearch').addEventListener('input',function(){
+  if(this.value.trim()){navigate('patients');document.getElementById('patSearch').value=this.value;filterPats(this.value);}
+});
+window.addEventListener('resize',()=>{if(document.getElementById('page-appointments').classList.contains('active'))renderWeek();});
+document.querySelectorAll('.mo').forEach(mo=>mo.addEventListener('click',e=>{if(e.target===mo)mo.classList.remove('show');}));
+
+// Firebase status banner
+function updateFBBanner(){
+  const note=document.getElementById('fbNote'),line=document.getElementById('fbStatusLine');
+  if(!note||!line)return;
+  const fb=window._FB,cfg=window._firebaseConfig||{};
+  if(fb&&fb.FB_READY){
+    note.style.borderLeftColor='var(--success)';
+    line.innerHTML='<strong style="color:var(--success)">&#10003; Firebase Connected</strong> &mdash; Live auth &amp; database active. Project: <strong>'+cfg.projectId+'</strong>';
+  } else if(cfg.projectId&&!cfg.projectId.includes('YOUR')){
+    note.style.borderLeftColor='var(--warning)';
+    line.innerHTML='<strong style="color:var(--warning)">&#9888; Config found but not ready.</strong> Check F12 Console. Enable Auth (Email/Password) and Firestore in Firebase Console.';
+  } else {
+    line.innerHTML='<strong>Demo Mode</strong> &mdash; Any email + password <strong>demo1234</strong>';
+  }
+}
+window.addEventListener('fb-ready',()=>setTimeout(updateFBBanner,150));
+setTimeout(updateFBBanner,900);
+
+// ══════════════════════════════════════
+//  FIREBASE STORAGE — FILE UPLOAD
+// ══════════════════════════════════════
+function triggerFileInput(pid){
+  document.getElementById('imgFileInput_'+pid)?.click();
+}
+async function handleFileUpload(event, pid, folder){
+  const files=Array.from(event.target.files);
+  if(!files.length)return;
+  if(!window._FB||!window._FB.FB_READY){
+    showToast('Firebase Storage not connected — configure Firebase first');return;
+  }
+  const {storage,ref,uploadBytesResumable,getDownloadURL}=window._FB;
+  const progWrap=document.getElementById('uploadProg_'+pid);
+  const progBar=document.getElementById('progBar_'+pid);
+  const progTxt=document.getElementById('progTxt_'+pid);
+  if(progWrap)progWrap.style.display='block';
+
+  for(let i=0;i<files.length;i++){
+    const file=files[i];
+    const path=`patients/${pid}/${folder}/${Date.now()}_${file.name}`;
+    const storageRef=ref(storage,path);
+    const uploadTask=uploadBytesResumable(storageRef,file);
+    await new Promise((resolve,reject)=>{
+      uploadTask.on('state_changed',
+        snap=>{
+          const pct=Math.round(snap.bytesTransferred/snap.totalBytes*100);
+          if(progBar)progBar.style.width=pct+'%';
+          if(progTxt)progTxt.textContent=`Uploading ${file.name} (${pct}%)`;
+        },
+        err=>{ showToast('Upload failed: '+err.message); reject(err); },
+        async ()=>{
+          const url=await getDownloadURL(uploadTask.snapshot.ref);
+          // Save reference to Firestore
+          const pat=PATIENTS.find(p=>p.id===pid);
+          if(pat){
+            if(!pat.files)pat.files=[];
+            pat.files.push({name:file.name,url,path,folder,date:new Date().toISOString().split('T')[0],size:file.size});
+            await saveToFirebase('patients',pid,pat);
+          }
+          showToast('Uploaded: '+file.name);
+          resolve();
+        }
+      );
+    });
+  }
+  if(progWrap)progWrap.style.display='none';
+  // Reload file list
+  loadPatientFiles(pid);
+}
+async function loadPatientFiles(pid){
+  const listEl=document.getElementById('fileList_'+pid);
+  const loadEl=document.getElementById('fileListLoading_'+pid);
+  if(!listEl)return;
+  // Show from patient record (works offline too)
+  const pat=PATIENTS.find(p=>p.id===pid);
+  const files=(pat&&pat.files)||[];
+  if(!files.length){
+    listEl.innerHTML='<div style="font-size:.76rem;color:var(--muted);padding:6px 0">No files uploaded yet.</div>';
+    return;
+  }
+  if(loadEl)loadEl.remove();
+  listEl.innerHTML=files.map(f=>`
+    <div class="file-item">
+      <div class="file-item-icon">${fileIcon(f.name)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="file-item-name">${f.name}</div>
+        <div class="file-item-date">${f.date} · ${fmtSize(f.size)}</div>
+      </div>
+      <div class="file-item-actions">
+        <button class="fbtn-view" onclick="window.open('${f.url}','_blank')">View</button>
+        <button class="fbtn-del" onclick="deleteFile('${pid}','${f.path}','${f.name}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+function fileIcon(name){
+  const ext=(name.split('.').pop()||'').toLowerCase();
+  const svgPath = ext==='pdf'
+    ? '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'
+    : '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/>';
+  return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svgPath}</svg>`;
+}
+function fmtSize(b){
+  if(!b)return'';
+  if(b>1048576)return(b/1048576).toFixed(1)+' MB';
+  return(b/1024).toFixed(0)+' KB';
+}
+async function deleteFile(pid, path, name){
+  if(!window._FB||!window._FB.FB_READY){showToast('Firebase not connected');return;}
+  const {storage,ref,deleteObject}=window._FB;
+  try{
+    await deleteObject(ref(storage,path));
+    const pat=PATIENTS.find(p=>p.id===pid);
+    if(pat&&pat.files){
+      pat.files=pat.files.filter(f=>f.path!==path);
+      await saveToFirebase('patients',pid,pat);
+    }
+    loadPatientFiles(pid);
+    showToast('File deleted: '+name);
+  }catch(e){ showToast('Delete failed: '+e.message); }
+}
+
+// ══════════════════════════════════════
+//  AUTOMATED REMINDER SCHEDULER
+//  (Client-side scheduler — for full
+//   automation use Cloud Functions,
+//   see deploy guide)
+// ══════════════════════════════════════
+let _reminderInterval = null;
+function startReminderScheduler(){
+  // Check every 5 minutes
+  checkAndSendReminders();
+  _reminderInterval = setInterval(checkAndSendReminders, 5*60*1000);
+}
+function checkAndSendReminders(){
+  const waToken = localStorage.getItem('oa-wa-token')||'';
+  const waPhoneId = localStorage.getItem('oa-wa-phoneid')||'';
+  if(!waToken||!waPhoneId) return; // WhatsApp not configured
+  const now = new Date();
+  APPOINTMENTS.forEach(appt=>{
+    if(appt.status==='cancelled') return;
+    const apptTime = new Date(appt.date+'T'+appt.time);
+    const diff = apptTime - now;
+    const h24 = 24*60*60*1000, h2 = 2*60*60*1000, margin = 5*60*1000;
+    const needs24 = diff>0 && diff<h24+margin && diff>h24-margin && !localStorage.getItem('rem24_'+appt.id);
+    const needs2  = diff>0 && diff<h2+margin  && diff>h2-margin  && !localStorage.getItem('rem2_'+appt.id);
+    if(needs24){ sendWAReminder(appt,'24h',waToken,waPhoneId); localStorage.setItem('rem24_'+appt.id,'1'); }
+    if(needs2){  sendWAReminder(appt,'2h', waToken,waPhoneId); localStorage.setItem('rem2_'+appt.id,'1'); }
+  });
+}
+async function sendWAReminder(appt, when, token, phoneId){
+  const pat = PATIENTS.find(p=>p.id===appt.patientId);
+  if(!pat||!pat.phone) return;
+  const phone = pat.phone.replace(/\D/g,'');
+  const msgMap = {
+    '24h': `Dear ${pat.name.split(' ')[0]}, reminder: you have an appointment tomorrow at ${appt.time} for ${appt.reason}. Please confirm your attendance. — OrthoAssist`,
+    '2h':  `Dear ${pat.name.split(' ')[0]}, your appointment is in 2 hours at ${appt.time} for ${appt.reason}. See you soon! — OrthoAssist`
+  };
+  const msg = msgMap[when];
+  try{
+    await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({messaging_product:'whatsapp',to:phone,type:'text',text:{body:msg}})
+    });
+    console.log(`[OrthoAssist] WA ${when} reminder sent to ${pat.name}`);
+    showToast(`Auto-reminder sent to ${pat.name} (${when})`);
+  }catch(e){ console.warn('WA reminder failed:',e); }
+}
+// Save WA config to localStorage when user saves it
+function saveWAConfig(){
+  const token=document.getElementById('waToken')?.value||'';
+  const phoneId=document.getElementById('waPhoneId')?.value||'';
+  if(token) localStorage.setItem('oa-wa-token',token);
+  if(phoneId) localStorage.setItem('oa-wa-phoneid',phoneId);
+  showToast('WhatsApp config saved — auto-reminders active');
+  startReminderScheduler();
+}
+// Load saved WA config on startup
+function loadWAConfig(){
+  const token=localStorage.getItem('oa-wa-token')||'';
+  const phoneId=localStorage.getItem('oa-wa-phoneid')||'';
+  const tEl=document.getElementById('waToken');
+  const pEl=document.getElementById('waPhoneId');
+  if(tEl&&token)tEl.value=token;
+  if(pEl&&phoneId)pEl.value=phoneId;
+  if(token&&phoneId) startReminderScheduler();
+}
+</script>
+</body>
+</html>
