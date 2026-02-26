@@ -14,39 +14,27 @@
   import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy }
     from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
   
-  // ── Firebase Config ───────────────────────────────────────────────
-  const firebaseConfig = {
-    apiKey: "AIzaSyAUmxmPMbvxHdJ1WPrSxkPJIHNEBQJYAO8",
-    authDomain: "orthoassistant-71.firebaseapp.com",
-    projectId: "orthoassistant-71",
-    storageBucket: "orthoassistant-71.firebasestorage.app",
-    messagingSenderId: "1007957638145",
-    appId: "1:1007957638145:web:1ddfaf8cace0a8d1ba9400",
-    measurementId: "G-9T2T0CGDD5"
-  };
+  // ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────────
+ // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAUmxmPMbvxHdJ1WPrSxkPJIHNEBQJYAO8",
+  authDomain: "orthoassistant-71.firebaseapp.com",
+  projectId: "orthoassistant-71",
+  storageBucket: "orthoassistant-71.firebasestorage.app",
+  messagingSenderId: "1007957638145",
+  appId: "1:1007957638145:web:1ddfaf8cace0a8d1ba9400",
+  measurementId: "G-9T2T0CGDD5"
+};
   // ─────────────────────────────────────────────────────────────────
 
-  let app, auth, db;
-  // FB_READY: always true when a real config is present — we validate
-  // by trying to init and catching any structural errors.
-  let FB_READY = false;
+  let app, auth, db, FB_READY = false;
   try {
-    app    = initializeApp(firebaseConfig);
-    auth   = getAuth(app);
-    db     = getFirestore(app);
-    // If we got here without throwing, Firebase SDK accepted the config.
-    // Do one final sanity check that projectId is not a placeholder.
-    FB_READY = typeof firebaseConfig.projectId === 'string'
-               && firebaseConfig.projectId.length > 3
-               && !firebaseConfig.projectId.includes('YOUR');
-    console.log('[OrthoAssist] Firebase SDK initialised. FB_READY =', FB_READY,
-                '| project:', firebaseConfig.projectId);
-  } catch(e) {
-    console.error('[OrthoAssist] Firebase init FAILED:', e.message);
-    FB_READY = false;
-  }
+    app  = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db   = getFirestore(app);
+    FB_READY = firebaseConfig.apiKey !== "YOUR_API_KEY";
+  } catch(e) { console.warn("Firebase not configured, running in demo mode."); }
 
-  window._firebaseConfig = firebaseConfig;
   window._FB = { auth, db, FB_READY,
     signIn: signInWithEmailAndPassword,
     signOut, onAuthStateChanged, createUserWithEmailAndPassword,
@@ -63,7 +51,199 @@
   --muted:#8da4be;--muted2:#b8cfe4;--text:#1a2e42;--border:#ddeaf6;
   --error:#d64045;--success:#2e9e6b;--warning:#e8930a;--purple:#7c4dff;
   --sw:240px;--th:60px;
+  /* surfaces (overridden in dark mode) */
+  --bg-app:var(--ice2);--bg-card:#fff;--bg-sidebar:var(--navy);
+  --bg-input:var(--ice2);--text-main:var(--text);--text-head:var(--navy);
+  --border-c:var(--border);
 }
+/* ── DARK MODE ── */
+body.dark{
+  --bg-app:#0f172a;--bg-card:#1e293b;--bg-sidebar:#0a1628;
+  --bg-input:#273549;--text-main:#cbd5e1;--text-head:#e2e8f0;
+  --border-c:#2d4060;--muted:#6b87a8;--muted2:#4a6480;
+  --border:#2d4060;--ice2:#1e293b;--ice:#162032;--white:#1e293b;
+}
+body.dark .topbar{background:#1e293b;border-color:#2d4060}
+body.dark .card{background:#1e293b;border-color:#2d4060}
+body.dark .sc{background:#1e293b;border-color:#2d4060}
+body.dark .dpanel{background:#1e293b}
+body.dark .dph{background:#1e293b;border-color:#2d4060}
+body.dark .mb{background:#1e293b}
+body.dark .mh{background:#1e293b;border-color:#2d4060}
+body.dark .lr{background:#1e293b}
+body.dark .pcard{background:#1e293b;border-color:#2d4060}
+body.dark .pcard:hover{border-color:rgba(59,158,255,.4)}
+body.dark .appt-form-card{background:#1e293b}
+body.dark .fbtn{background:#1e293b;border-color:#2d4060;color:#6b87a8}
+body.dark .fbtn.active{background:rgba(59,158,255,.12);border-color:var(--sky);color:var(--sky)}
+body.dark .exp-btn{background:#1e293b;border-color:#2d4060;color:#6b87a8}
+body.dark .exp-btn:hover{border-color:var(--blue);color:var(--sky)}
+body.dark .mf input,.dark .mf select,.dark .mf textarea,
+body.dark .aff input,.dark .aff select,.dark .iw input{background:#273549;border-color:#2d4060;color:#e2e8f0}
+body.dark .aff input:focus,.dark .aff select:focus,.dark .mf input:focus,
+body.dark .mf select:focus,.dark .mf textarea:focus,.dark .iw input:focus{background:#1e3a5f;border-color:var(--sky)}
+body.dark .note-item,.dark .rx-item,.dark .rem-card,.dark .staff-card{background:#162032;border-color:#2d4060}
+body.dark .img-upload-btn{background:#162032;border-color:#2d4060;color:#6b87a8}
+body.dark .bill-table th{background:#162032}
+body.dark .bill-table tr:hover td{background:#162032}
+body.dark .pdiag{background:#162032}
+body.dark .role-tabs{background:#162032}
+body.dark .rtab.active{background:#1e293b;color:#e2e8f0}
+body.dark .vdb{background:#162032}
+body.dark .tb-title,.dark .tbt{color:#e2e8f0}
+body.dark .tbbtn{border-color:#2d4060;color:#6b87a8}
+body.dark .tbsrch{background:#273549;border-color:#2d4060}
+body.dark .tbsrch input{color:#e2e8f0}
+body.dark .fsearch{background:#1e293b;border-color:#2d4060}
+body.dark .aibox{background:#1e293b}
+body.dark .aih,.dark .aimodes,.dark .aipsel,.dark .aiqs,.dark .aiinp-area{border-color:#2d4060}
+body.dark .aiinp{background:#273549;border-color:#2d4060;color:#e2e8f0}
+body.dark .aimsg.ai{background:#162032;border-color:#2d4060;color:#cbd5e1}
+body.dark .aimode{background:#1e293b;border-color:#2d4060;color:#6b87a8}
+body.dark .dtabs{background:#162032}
+body.dark .dtab.active{background:#1e293b}
+body.dark .aiqb{background:rgba(59,158,255,.1);border-color:rgba(59,158,255,.2)}
+body.dark .inv-items th{background:#162032;color:#94a3b8}
+body.dark .inv-hd{border-color:#2d4060}
+body.dark .inv-parties,.dark .inv-totals .inv-total-row.grand{border-color:#2d4060}
+body.dark .inv-footer-note{border-color:#2d4060}
+body.dark .btn-cancel{background:#1e293b;border-color:#2d4060;color:#6b87a8}
+body.dark .bill-table td{border-color:#2d4060}
+body.dark .bill-table th{border-color:#2d4060}
+body.dark .snav .nsl{color:rgba(255,255,255,.22)}
+/* RTL support */
+body.rtl{direction:rtl;text-align:right}
+body.rtl .sidebar{left:auto;right:0;transform:translateX(100%)}
+body.rtl .sidebar.open{transform:translateX(0)}
+body.rtl .main-area{direction:rtl}
+body.rtl .dpanel{animation:slideRight .3s ease}
+body.rtl .lc{flex-direction:row-reverse}
+body.rtl .ll{border-radius:0 20px 20px 0}
+body.rtl .lr{border-radius:20px 0 0 20px}
+body.rtl .ni svg{margin-left:9px;margin-right:0}
+body.rtl .nb{margin-right:auto;margin-left:0}
+body.rtl .ucard{flex-direction:row-reverse}
+body.rtl .lbtn{margin-right:auto;margin-left:0}
+body.rtl .pct{flex-direction:row-reverse}
+body.rtl .pcf{flex-direction:row-reverse}
+body.rtl .ph{flex-direction:row-reverse}
+body.rtl .fbar{flex-direction:row-reverse}
+body.rtl .card-hd{flex-direction:row-reverse}
+body.rtl .dph{flex-direction:row-reverse}
+body.rtl .ai-item{flex-direction:row-reverse}
+body.rtl .mrow{direction:rtl}
+body.rtl .pdiag{border-left:none;border-right:3px solid var(--blue)}
+body.rtl .nitem-hd{flex-direction:row-reverse}
+body.rtl .vi{flex-direction:row-reverse}
+body.rtl .dst::after{display:none}
+body.rtl .dst::before{content:'';flex:1;height:1px;background:var(--border);margin-right:8px}
+@keyframes slideRight{from{transform:translateX(-40px);opacity:0}to{transform:translateX(0);opacity:1}}
+/* ── SURGERY STYLES ── */
+.surg-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px;transition:transform .15s,box-shadow .15s}
+body.dark .surg-card{background:#1e293b;border-color:#2d4060}
+.surg-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(26,95,168,.1)}
+.surg-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:10px}
+.surg-title{font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;color:var(--navy)}
+body.dark .surg-title{color:#e2e8f0}
+.surg-meta{font-size:.74rem;color:var(--muted);margin-top:2px}
+.surg-status{font-size:.67rem;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap}
+.ss-scheduled{background:rgba(59,158,255,.12);color:var(--blue)}
+.ss-inprogress{background:rgba(232,147,10,.12);color:var(--warning)}
+.ss-completed{background:rgba(46,158,107,.12);color:var(--success)}
+.ss-cancelled{background:rgba(214,64,69,.1);color:var(--error)}
+.surg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.surg-field label{font-size:.64rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:2px}
+.surg-field p{font-size:.8rem;color:var(--text);font-weight:500}
+body.dark .surg-field p{color:#cbd5e1}
+.surg-checklist{background:var(--ice2);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+body.dark .surg-checklist{background:#162032}
+.surg-checklist-title{font-size:.7rem;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+body.dark .surg-checklist-title{color:#e2e8f0}
+.chk-item{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:.78rem;color:var(--text);cursor:pointer}
+body.dark .chk-item{color:#cbd5e1}
+.chk-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--blue)}
+.surg-actions{display:flex;gap:7px;flex-wrap:wrap}
+/* ── TIMELINE STYLES ── */
+.timeline{position:relative;padding-left:24px}
+body.rtl .timeline{padding-left:0;padding-right:24px}
+.timeline::before{content:'';position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:linear-gradient(to bottom,var(--blue),var(--border));border-radius:2px}
+body.rtl .timeline::before{left:auto;right:8px}
+.tl-item{position:relative;margin-bottom:18px}
+.tl-dot{position:absolute;left:-20px;top:4px;width:12px;height:12px;border-radius:50%;border:2px solid var(--blue);background:#fff;z-index:1}
+body.dark .tl-dot{background:#1e293b}
+body.rtl .tl-dot{left:auto;right:-20px}
+.tl-dot.gr{border-color:var(--success);background:#fff}
+body.dark .tl-dot.gr{background:#1e293b}
+.tl-dot.or{border-color:var(--warning);background:#fff}
+body.dark .tl-dot.or{background:#1e293b}
+.tl-dot.pu{border-color:var(--purple);background:#fff}
+body.dark .tl-dot.pu{background:#1e293b}
+.tl-date{font-size:.67rem;color:var(--muted);margin-bottom:3px;font-weight:500}
+.tl-title{font-size:.82rem;font-weight:500;color:var(--text);margin-bottom:2px}
+body.dark .tl-title{color:#e2e8f0}
+.tl-body{font-size:.76rem;color:var(--muted);line-height:1.6}
+.tl-tag{display:inline-block;font-size:.62rem;padding:2px 8px;border-radius:20px;background:rgba(59,158,255,.1);color:var(--blue);margin-top:4px}
+/* ── LAB RESULTS ── */
+.lab-item{background:var(--ice2);border-radius:10px;padding:12px 14px;margin-bottom:10px;border:1px solid var(--border)}
+body.dark .lab-item{background:#162032;border-color:#2d4060}
+.lab-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.lab-name{font-size:.83rem;font-weight:500;color:var(--navy)}
+body.dark .lab-name{color:#e2e8f0}
+.lab-date{font-size:.68rem;color:var(--muted)}
+.lab-results{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:7px}
+.lab-val{background:#fff;border-radius:7px;padding:7px 10px;border:1px solid var(--border)}
+body.dark .lab-val{background:#1e293b;border-color:#2d4060}
+.lab-val-name{font-size:.65rem;color:var(--muted);margin-bottom:2px}
+.lab-val-num{font-size:.88rem;font-weight:600;color:var(--navy)}
+body.dark .lab-val-num{color:#e2e8f0}
+.lab-val-ref{font-size:.63rem;color:var(--muted)}
+.lab-flag{color:var(--error)!important}
+/* ── REPORTS STYLES ── */
+.rev-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.rev-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:16px;position:relative;overflow:hidden}
+body.dark .rev-card{background:#1e293b;border-color:#2d4060}
+.rev-card::after{content:'';position:absolute;top:0;left:0;height:3px;width:100%}
+.rev-card.egp::after{background:linear-gradient(90deg,#2e9e6b,#43c98b)}
+.rev-card.usd::after{background:linear-gradient(90deg,#1a5fa8,#3b9eff)}
+.rev-card.cnt::after{background:linear-gradient(90deg,#7c4dff,#b388ff)}
+.rev-card.unp::after{background:linear-gradient(90deg,#d64045,#f07277)}
+.rev-label{font-size:.7rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em}
+.rev-val{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:600;color:var(--navy);line-height:1}
+body.dark .rev-val{color:#e2e8f0}
+.rev-sub{font-size:.72rem;color:var(--muted);margin-top:4px}
+.chart-wrap{background:#fff;border-radius:12px;border:1px solid var(--border);padding:18px;margin-bottom:14px}
+body.dark .chart-wrap{background:#1e293b;border-color:#2d4060}
+.chart-title{font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:600;color:var(--navy);margin-bottom:14px}
+body.dark .chart-title{color:#e2e8f0}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:160px;padding-bottom:20px;position:relative}
+.bar-chart::after{content:'';position:absolute;bottom:20px;left:0;right:0;height:1px;background:var(--border)}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.bar{border-radius:5px 5px 0 0;min-height:4px;transition:height .4s ease;cursor:pointer;position:relative}
+.bar:hover::after{content:attr(data-val);position:absolute;top:-22px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;font-size:.65rem;padding:2px 6px;border-radius:4px;white-space:nowrap}
+body.dark .bar:hover::after{background:#e2e8f0;color:#0f172a}
+.bar-lbl{font-size:.65rem;color:var(--muted);text-align:center}
+.pie-wrap{display:flex;align-items:center;gap:20px;justify-content:center;padding:10px 0}
+.pie-legend{display:flex;flex-direction:column;gap:8px}
+.pie-leg-item{display:flex;align-items:center;gap:8px;font-size:.76rem;color:var(--text)}
+body.dark .pie-leg-item{color:#cbd5e1}
+.pie-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+/* ── LANG TOGGLE + DARK MODE BUTTON ── */
+.topbar-extras{display:flex;gap:6px;align-items:center}
+.lang-toggle{display:flex;align-items:center;background:var(--ice2);border:1.5px solid var(--border);border-radius:8px;overflow:hidden;height:32px}
+body.dark .lang-toggle{background:#273549;border-color:#2d4060}
+.lang-btn{padding:0 10px;font-size:.72rem;font-weight:600;border:none;background:none;cursor:pointer;color:var(--muted);height:100%;transition:all .15s;font-family:'DM Sans',sans-serif}
+.lang-btn.active{background:var(--blue);color:#fff}
+.dark-toggle{width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .15s;flex-shrink:0}
+body.dark .dark-toggle{border-color:#2d4060;color:#94a3b8}
+.dark-toggle:hover{border-color:var(--sky);color:var(--sky)}
+.dark-toggle svg{width:14px;height:14px}
+/* ── REVENUE DASHBOARD MINI CHART on dash ── */
+.dash-rev{background:#fff;border-radius:12px;border:1px solid var(--border);padding:16px}
+body.dark .dash-rev{background:#1e293b;border-color:#2d4060}
+.mini-bars{display:flex;align-items:flex-end;gap:5px;height:60px;margin-top:10px}
+.mini-bar{flex:1;border-radius:3px 3px 0 0;background:linear-gradient(to top,var(--blue),var(--sky));opacity:.7;min-height:4px;transition:opacity .15s}
+.mini-bar:hover{opacity:1}
+.mini-bar-lbl{font-size:.58rem;color:var(--muted);text-align:center;margin-top:3px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text)}
@@ -606,7 +786,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text)}
       <button class="btnp" id="loginBtn"><span class="bt">Sign In</span><div class="sp"></div></button>
 
       <div class="fb-note" id="fbNote">
-        <span id="fbStatusLine">&#9203; Connecting to Firebase&hellip;</span>
+        <strong>Demo Mode</strong> — Firebase not yet configured. Using local demo data.<br>
+        To enable real auth &amp; database, paste your <strong>Firebase config</strong> in the &lt;script type="module"&gt; block at the top of this file.
+        <br><br><strong>Demo credentials:</strong> any email + password "demo1234"
       </div>
     </div>
   </div>
@@ -641,6 +823,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text)}
       <div class="tbsrch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search patients…" id="gSearch"/></div>
       <button class="tbbtn ndot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
       <button class="tbbtn" onclick="openAI()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/><circle cx="9" cy="13" r="1" fill="currentColor"/><circle cx="15" cy="13" r="1" fill="currentColor"/></svg></button>
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="btnEN" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" id="btnAR" onclick="setLang('ar')">ع</button>
+      </div>
+      <button class="dark-toggle" id="darkToggle" onclick="toggleDark()" title="Toggle dark mode">
+        <svg id="darkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
     </div>
 
     <div class="ca">
@@ -648,10 +837,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text)}
       <!-- ── DASHBOARD ── -->
       <div class="page active" id="page-dashboard">
         <div class="stats-grid">
-          <div class="sc bl"><div class="si bl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="sv" id="sPats">6</div><div class="sl">Active Patients</div><div class="str">↑ 3 this month</div></div>
-          <div class="sc gr"><div class="si gr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="sv" id="sToday">6</div><div class="sl">Today's Appts</div><div class="str">↑ 2 confirmed</div></div>
-          <div class="sc or"><div class="si or"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="sv" id="sBill">0</div><div class="sl">Unpaid Invoices</div><div class="str">Needs attention</div></div>
-          <div class="sc pu"><div class="si pu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="sv" id="sRx">0</div><div class="sl">Prescriptions Today</div><div class="str">Active</div></div>
+          <div class="sc bl"><div class="si bl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="sv" id="sPats">6</div><div class="sl" data-i18n="activePatients">Active Patients</div><div class="str">↑ 3 this month</div></div>
+          <div class="sc gr"><div class="si gr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="sv" id="sToday">6</div><div class="sl" data-i18n="todaysAppts">Today's Appts</div><div class="str">↑ 2 confirmed</div></div>
+          <div class="sc or"><div class="si or"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="sv" id="sBill">0</div><div class="sl" data-i18n="unpaidInvoices">Unpaid Invoices</div><div class="str">Needs attention</div></div>
+          <div class="sc pu"><div class="si pu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="sv" id="sRx">0</div><div class="sl" data-i18n="prescriptionsToday">Prescriptions Today</div><div class="str">Active</div></div>
         </div>
         <div class="dash-grid">
           <div class="card">
@@ -661,14 +850,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text)}
           <div style="display:flex;flex-direction:column;gap:12px">
             <div class="card">
               <div class="card-hd"><div class="card-ti">Upcoming Surgeries</div></div>
-              <div class="card-bd">
-                <div class="sgi"><div class="sgd"><div class="sgdd">27</div><div class="sgdm">Feb</div></div><div style="flex:1"><div style="font-size:.8rem;font-weight:500;color:var(--text)">Ahmed Al-Rashidi</div><div style="font-size:.71rem;color:var(--muted)">Total Knee Replacement</div></div><div style="font-size:.7rem;color:var(--muted)">07:30</div></div>
-                <div class="sgi"><div class="sgd"><div class="sgdd">03</div><div class="sgdm">Mar</div></div><div style="flex:1"><div style="font-size:.8rem;font-weight:500;color:var(--text)">Nadia Khoury</div><div style="font-size:.71rem;color:var(--muted)">Rotator Cuff Repair</div></div><div style="font-size:.7rem;color:var(--muted)">09:00</div></div>
-                <div class="sgi"><div class="sgd"><div class="sgdd">10</div><div class="sgdm">Mar</div></div><div style="flex:1"><div style="font-size:.8rem;font-weight:500;color:var(--text)">Omar Mansour</div><div style="font-size:.71rem;color:var(--muted)">Spinal Fusion L4–L5</div></div><div style="font-size:.7rem;color:var(--muted)">08:00</div></div>
+              <div class="card-bd" id="dashSurgList"><!-- rendered by renderDashSurg() --></div>
+            </div>
+            <div class="dash-rev">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div class="card-ti" data-i18n="revenueThisMonth">Revenue This Month</div>
+                <span class="card-ac" onclick="navigate('reports')">Full Report →</span>
               </div>
+              <div id="dashRevVal" style="font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:600;color:var(--navy);margin:6px 0 2px"></div>
+              <div id="dashRevSub" style="font-size:.72rem;color:var(--muted)"></div>
+              <div class="mini-bars" id="miniBarChart"></div>
+              <div style="display:flex;justify-content:space-between;margin-top:2px" id="miniBarLabels"></div>
             </div>
             <div class="card">
-              <div class="card-hd"><div class="card-ti">Recent Activity</div></div>
+              <div class="card-hd"><div class="card-ti" data-i18n="recentActivity">Recent Activity</div></div>
               <div class="card-bd">
                 <ul class="acl">
                   <li class="aci"><div class="acd gr"></div><div><div class="act"><span>Fatima Al-Hassan</span> checked in</div><div class="actime">8 min ago</div></div></li>
@@ -801,6 +996,43 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text)}
         <div class="staff-grid" id="staffGrid"></div>
       </div>
 
+
+      <!-- ── SURGERY ── -->
+      <div class="page" id="page-surgery">
+        <div class="ph">
+          <div><div class="phead" data-i18n="surgery">Surgery Schedule</div><div class="psub" id="surgSub">Manage all surgical procedures</div></div>
+          <button class="btn-add" onclick="openNewSurg()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span data-i18n="newSurgery">New Surgery</span></button>
+        </div>
+        <div id="surgList"></div>
+      </div>
+
+      <!-- ── REPORTS ── -->
+      <div class="page" id="page-reports">
+        <div class="ph"><div><div class="phead" data-i18n="reports">Revenue Reports</div><div class="psub" data-i18n="reportsSub">Monthly financial overview — EGP &amp; USD</div></div>
+          <div style="display:flex;gap:7px">
+            <button class="exp-btn" onclick="exportRevCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span data-i18n="export">Export CSV</span></button>
+          </div>
+        </div>
+        <div class="rev-cards" id="revCards"></div>
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:14px;align-items:start" id="reportsGrid">
+          <div class="chart-wrap">
+            <div class="chart-title" data-i18n="monthlyRevenue">Monthly Revenue (EGP)</div>
+            <div class="bar-chart" id="barChart"></div>
+            <div style="display:flex;gap:0;margin-top:4px" id="barLabels"></div>
+          </div>
+          <div>
+            <div class="chart-wrap">
+              <div class="chart-title" data-i18n="invoiceStatus">Invoice Status</div>
+              <div class="pie-wrap" id="pieChart"></div>
+            </div>
+            <div class="chart-wrap" style="margin-top:0">
+              <div class="chart-title" data-i18n="topServices">Top Services</div>
+              <div id="topServices"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /ca -->
   </div><!-- /main-area -->
 </div><!-- /appShell -->
@@ -810,11 +1042,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text)}
   <div class="dpanel" id="dpanel">
     <div class="dph">
       <div class="dtabs">
-        <button class="dtab active" onclick="switchDTab('info',this)">Info</button>
-        <button class="dtab" onclick="switchDTab('notes',this)">Notes</button>
-        <button class="dtab" onclick="switchDTab('imaging',this)">Imaging</button>
-        <button class="dtab" onclick="switchDTab('rx',this)">Rx</button>
-        <button class="dtab" onclick="switchDTab('billing',this)">Billing</button>
+        <button class="dtab active" onclick="switchDTab('info',this)" data-i18n="info">Info</button>
+        <button class="dtab" onclick="switchDTab('timeline',this)" data-i18n="timeline">Timeline</button>
+        <button class="dtab" onclick="switchDTab('notes',this)" data-i18n="notes">Notes</button>
+        <button class="dtab" onclick="switchDTab('labs',this)" data-i18n="labs">Labs</button>
+        <button class="dtab" onclick="switchDTab('imaging',this)" data-i18n="imaging">Imaging</button>
+        <button class="dtab" onclick="switchDTab('rx',this)" data-i18n="rx">Rx</button>
+        <button class="dtab" onclick="switchDTab('billing',this)" data-i18n="billing">Billing</button>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
         <button class="exp-btn" style="padding:5px 9px;font-size:.7rem" onclick="printPat()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print</button>
@@ -921,6 +1155,41 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text)}
   </div>
 </div>
 
+<!-- ════ NEW SURGERY MODAL ════ -->
+<div class="mo" id="surgModal">
+  <div class="mb wide">
+    <div class="mh"><div class="mti" id="surgModalTi">New Surgery</div><button class="dclose" onclick="closeModal('surgModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="mbody">
+      <input type="hidden" id="eSurgId"/>
+      <div class="mrow"><div class="mf"><label>Patient *</label><select id="surgPat"><option value="">Select patient…</option></select></div><div class="mf"><label>Procedure *</label><input type="text" id="surgProc" placeholder="e.g. Total Knee Replacement"/></div></div>
+      <div class="mrow"><div class="mf"><label>Date *</label><input type="date" id="surgDate"/></div><div class="mf"><label>Time</label><input type="time" id="surgTime"/></div></div>
+      <div class="mrow"><div class="mf"><label>Theatre / Room</label><input type="text" id="surgRoom" placeholder="e.g. OR-1, Theatre 3"/></div><div class="mf"><label>Estimated Duration</label><select id="surgDur"><option value="1h">1 hour</option><option value="1.5h">1.5 hours</option><option value="2h" selected>2 hours</option><option value="3h">3 hours</option><option value="4h">4 hours</option><option value="5h+">5+ hours</option></select></div></div>
+      <div class="mrow"><div class="mf"><label>Surgeon</label><input type="text" id="surgSurgeon" placeholder="Lead surgeon name"/></div><div class="mf"><label>Assisting Team</label><input type="text" id="surgTeam" placeholder="e.g. Dr. X, Nurse Y"/></div></div>
+      <div class="mf"><label>Status</label><select id="surgStatus"><option value="scheduled">Scheduled</option><option value="inprogress">In Progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>
+      <div class="mf"><label>Pre-op Notes</label><textarea id="surgPreop" placeholder="Pre-operative checklist and notes…"></textarea></div>
+      <div class="mf"><label>Post-op Notes / Recovery</label><textarea id="surgPostop" placeholder="Post-operative notes and recovery plan…"></textarea></div>
+    </div>
+    <div class="mfooter"><button class="btn-cancel" onclick="closeModal('surgModal')">Cancel</button><button class="btn-save" onclick="saveSurg()">Save Surgery</button></div>
+  </div>
+</div>
+
+<!-- ════ NEW LAB RESULT MODAL ════ -->
+<div class="mo" id="labModal">
+  <div class="mb">
+    <div class="mh"><div class="mti">Add Lab Result</div><button class="dclose" onclick="closeModal('labModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="mbody">
+      <input type="hidden" id="eLabPid"/>
+      <div class="mrow"><div class="mf"><label>Test Name *</label><input type="text" id="labName" placeholder="e.g. CBC, ESR, CRP…"/></div><div class="mf"><label>Date</label><input type="date" id="labDate"/></div></div>
+      <div id="labValsList"></div>
+      <button type="button" style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:7px;font-size:.75rem;color:var(--blue);background:rgba(59,158,255,.08);border:1px solid rgba(59,158,255,.2);cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:12px" onclick="addLabValRow()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Value
+      </button>
+      <div class="mf"><label>Notes</label><textarea id="labNotes" placeholder="Interpretation / comments…" style="min-height:60px"></textarea></div>
+    </div>
+    <div class="mfooter"><button class="btn-cancel" onclick="closeModal('labModal')">Cancel</button><button class="btn-save" onclick="saveLab()">Save Lab Result</button></div>
+  </div>
+</div>
+
 <!-- ════ AI PANEL ════ -->
 <div id="aiPanel">
   <div class="aipbg" onclick="closeAI()"></div>
@@ -964,13 +1233,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text)}
 // ══════════════════════════════════════
 const EGP_USD = 0.0203; // 1 EGP ≈ 0.0203 USD (adjustable)
 const ROLE_NAV = {
-  doctor: ['dashboard','patients','appointments','prescriptions','billing','reminders'],
+  doctor: ['dashboard','patients','appointments','surgery','prescriptions','billing','reports','reminders'],
   receptionist: ['dashboard','patients','appointments','billing','reminders'],
-  admin: ['dashboard','patients','appointments','billing','prescriptions','reminders','staff']
+  admin: ['dashboard','patients','appointments','surgery','billing','prescriptions','reports','reminders','staff']
 };
 const NAV_LABELS = {
   dashboard:'Dashboard', patients:'Patients', appointments:'Appointments',
-  prescriptions:'Prescriptions', billing:'Billing', reminders:'Reminders', staff:'Staff'
+  surgery:'Surgery', prescriptions:'Prescriptions', billing:'Billing',
+  reports:'Reports', reminders:'Reminders', staff:'Staff'
 };
 const NAV_ICONS = {
   dashboard:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
@@ -979,13 +1249,15 @@ const NAV_ICONS = {
   prescriptions:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
   billing:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
   reminders:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
-  staff:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+  staff:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  surgery:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/><circle cx="19" cy="5" r="2"/>',
+  reports:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'
 };
 const COLORS = ['c1','c2','c3','c4','c5'];
 
 let PATIENTS = [
-  {id:'PT-001',name:'Fatima Al-Hassan',dob:'1978-03-14',age:46,gender:'Female',phone:'+20 100 123 4567',email:'fatima.hassan@email.com',diagnosis:'Osteoarthritis – Right Knee',condition:'knee',insurance:'GlobeMed',insuranceNo:'GM-778821',imaging:'AP & Lateral X-ray (Jan 2025) – Grade III OA',color:'c1',notes:[{date:'2026-02-18',type:'Follow-up',text:'Patient reports improvement in knee pain. Swelling reduced. Continuing physiotherapy 3x/week. Celecoxib 200mg daily. Review in 4 weeks.'}],visits:[{day:'18',mon:'Feb',type:'Follow-up',note:'Knee pain improvement, reduced swelling'},{day:'04',mon:'Jan',type:'Consultation',note:'Initial assessment, X-ray ordered'}]},
-  {id:'PT-002',name:'Khalid Ibrahim',dob:'1965-07-22',age:59,gender:'Male',phone:'+20 111 987 6543',email:'khalid.ibrahim@email.com',diagnosis:'Lumbar Disc Herniation L4–L5',condition:'spine',insurance:'Allianz Egypt',insuranceNo:'AE-334455',imaging:'MRI Lumbar Spine (Jan 2025) – L4-L5 disc protrusion',color:'c2',notes:[{date:'2026-02-20',type:'Review',text:'MRI confirms L4-L5 herniation with left-sided radiculopathy. Conservative treatment ongoing.'}],visits:[{day:'20',mon:'Feb',type:'Review',note:'MRI results discussed'},{day:'10',mon:'Jan',type:'MRI Review',note:'L4-L5 herniation confirmed'}]},
+  {id:'PT-001',name:'Fatima Al-Hassan',dob:'1978-03-14',age:46,gender:'Female',phone:'+20 100 123 4567',email:'fatima.hassan@email.com',diagnosis:'Osteoarthritis – Right Knee',condition:'knee',insurance:'GlobeMed',insuranceNo:'GM-778821',imaging:'AP & Lateral X-ray (Jan 2025) – Grade III OA',color:'c1',labs:[{name:'CBC',date:'2026-01-15',vals:[{n:'Hemoglobin',v:'12.4',u:'g/dL',ref:'12-16',flag:false},{n:'WBC',v:'7.2',u:'K/µL',ref:'4-11',flag:false},{n:'Platelets',v:'245',u:'K/µL',ref:'150-400',flag:false}],notes:'Within normal limits'},{name:'ESR / CRP',date:'2026-02-10',vals:[{n:'ESR',v:'42',u:'mm/hr',ref:'<20',flag:true},{n:'CRP',v:'18',u:'mg/L',ref:'<10',flag:true}],notes:'Elevated inflammatory markers consistent with active OA'}],notes:[{date:'2026-02-18',type:'Follow-up',text:'Patient reports improvement in knee pain. Swelling reduced. Continuing physiotherapy 3x/week. Celecoxib 200mg daily. Review in 4 weeks.'}],visits:[{day:'18',mon:'Feb',type:'Follow-up',note:'Knee pain improvement, reduced swelling'},{day:'04',mon:'Jan',type:'Consultation',note:'Initial assessment, X-ray ordered'}]},
+  {id:'PT-002',name:'Khalid Ibrahim',dob:'1965-07-22',age:59,gender:'Male',phone:'+20 111 987 6543',email:'khalid.ibrahim@email.com',diagnosis:'Lumbar Disc Herniation L4–L5',condition:'spine',insurance:'Allianz Egypt',insuranceNo:'AE-334455',imaging:'MRI Lumbar Spine (Jan 2025) – L4-L5 disc protrusion',color:'c2',labs:[{name:'MRI Markers',date:'2026-01-20',vals:[{n:'ESR',v:'55',u:'mm/hr',ref:'<20',flag:true},{n:'Vitamin D',v:'18',u:'ng/mL',ref:'30-100',flag:true}],notes:'Low Vit D — supplement prescribed'}],notes:[{date:'2026-02-20',type:'Review',text:'MRI confirms L4-L5 herniation with left-sided radiculopathy. Conservative treatment ongoing.'}],visits:[{day:'20',mon:'Feb',type:'Review',note:'MRI results discussed'},{day:'10',mon:'Jan',type:'MRI Review',note:'L4-L5 herniation confirmed'}]},
   {id:'PT-003',name:'Nadia Khoury',dob:'1990-11-05',age:34,gender:'Female',phone:'+20 122 456 7890',email:'nadia.khoury@email.com',diagnosis:'Rotator Cuff Tear – Left Shoulder',condition:'shoulder',insurance:'AXA Egypt',insuranceNo:'AX-991234',imaging:'MRI Shoulder (Feb 2025) – Partial supraspinatus tear',color:'c3',notes:[{date:'2026-02-22',type:'Pre-op',text:'Pre-operative assessment completed. Surgery scheduled Feb 27.'}],visits:[{day:'22',mon:'Feb',type:'Pre-op',note:'Pre-op assessment completed'}]},
   {id:'PT-004',name:'Ahmed Al-Rashidi',dob:'1972-09-30',age:52,gender:'Male',phone:'+20 100 321 0987',email:'ahmed.rashidi@email.com',diagnosis:'End-stage Knee OA – Right',condition:'knee',insurance:'GlobeMed',insuranceNo:'GM-556677',imaging:'Weight-bearing X-ray (Jan 2025) – Bone-on-bone OA',color:'c4',notes:[{date:'2026-02-21',type:'Pre-op',text:'TKR scheduled Feb 27. Consent signed. All pre-op investigations clear.'}],visits:[{day:'21',mon:'Feb',type:'Pre-op',note:'TKR scheduled Feb 27'}]},
   {id:'PT-005',name:'Layla Qasim',dob:'1985-04-18',age:39,gender:'Female',phone:'+20 111 654 3210',email:'layla.qasim@email.com',diagnosis:'Patellofemoral Syndrome',condition:'knee',insurance:'MetLife Egypt',insuranceNo:'ML-112233',imaging:'X-ray (Jan 2025) – Mild patellar tilt',color:'c5',notes:[{date:'2026-02-19',type:'Follow-up',text:'Responding well to physiotherapy. Pain reduced from 7/10 to 3/10.'}],visits:[{day:'19',mon:'Feb',type:'Follow-up',note:'Responding well to physio'}]},
@@ -1028,36 +1300,6 @@ let rxRows = 0;
 // ══════════════════════════════════════
 //  LOGIN & AUTH
 // ══════════════════════════════════════
-// ── Firebase status banner (runs after module fires) ─────────────
-function updateFBBanner() {
-  const note = document.getElementById('fbNote');
-  const line = document.getElementById('fbStatusLine');
-  if (!note || !line) return;
-  const fb   = window._FB;
-  const cfg  = window._firebaseConfig || {};
-  if (fb && fb.FB_READY) {
-    note.style.borderLeftColor = 'var(--success)';
-    line.innerHTML = '<strong style="color:var(--success)">&#10003; Firebase Connected</strong>'
-      + ' &mdash; Live database &amp; auth active.'
-      + ' Project: <strong>' + (cfg.projectId || 'unknown') + '</strong>';
-  } else if (cfg.projectId && !cfg.projectId.includes('YOUR')) {
-    // Config present but FB_READY false — SDK init likely failed
-    note.style.borderLeftColor = 'var(--warning)';
-    line.innerHTML = '<strong style="color:var(--warning)">&#9888; Config found but Firebase not ready.</strong><br>'
-      + 'Check F12 Console for the error. Most likely fixes:<br>'
-      + '&nbsp;1. <strong>Authentication</strong> &rarr; enable Email/Password in Firebase console<br>'
-      + '&nbsp;2. <strong>Firestore Database</strong> &rarr; Create database (test mode)<br>'
-      + '&nbsp;3. Add <strong>localhost</strong> to Authorised Domains in Auth settings<br>'
-      + '<small style="opacity:.7">project: ' + cfg.projectId + '</small>';
-  } else {
-    note.style.borderLeftColor = 'var(--sky)';
-    line.innerHTML = '<strong>Demo Mode</strong> &mdash; Paste your Firebase config to go live.<br>'
-      + '<strong>Demo login:</strong> any email + password <strong>demo1234</strong>';
-  }
-}
-window.addEventListener('fb-ready', () => setTimeout(updateFBBanner, 150));
-setTimeout(updateFBBanner, 900); // fallback if event already fired
-
 document.getElementById('tgpass').addEventListener('click',()=>{
   const p=document.getElementById('loginPw');
   p.type=p.type==='password'?'text':'password';
@@ -1133,7 +1375,7 @@ function buildNav(){
   nav.innerHTML=`<div class="nsl">Navigation</div>`+
     pages.map(p=>`<div class="ni${p==='dashboard'?' active':''}" data-page="${p}" onclick="navigate('${p}')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${NAV_ICONS[p]||''}</svg>
-      ${NAV_LABELS[p]}
+      ${(currentLang==='ar'&&I18N.ar[p])||NAV_LABELS[p]}
       ${p==='patients'?`<span class="nb" id="patBadge">${PATIENTS.length}</span>`:''}
     </div>`).join('');
   // role badge
@@ -1149,19 +1391,22 @@ function buildNav(){
 // ══════════════════════════════════════
 //  NAVIGATION
 // ══════════════════════════════════════
-const TITLES={dashboard:'Dashboard',patients:'Patients',appointments:'Appointments',prescriptions:'Prescriptions',billing:'Billing & Invoices',reminders:'WhatsApp Reminders',staff:'Staff & Accounts'};
+const TITLES={dashboard:'Dashboard',patients:'Patients',appointments:'Appointments',surgery:'Surgery Schedule',prescriptions:'Prescriptions',billing:'Billing & Invoices',reports:'Revenue Reports',reminders:'WhatsApp Reminders',staff:'Staff & Accounts'};
 function navigate(page){
   document.querySelectorAll('.ni').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pg=document.getElementById('page-'+page);
   if(pg) pg.classList.add('active');
-  document.getElementById('tbTitle').textContent=TITLES[page]||page;
+  const lang=document.documentElement.lang||'en';
+  document.getElementById('tbTitle').textContent=(lang==='ar'&&I18N.ar[page])||TITLES[page]||page;
   closeSidebar();
   if(page==='appointments') renderWeek();
   if(page==='billing') renderBilling();
   if(page==='prescriptions') renderRxList();
   if(page==='reminders') renderReminders();
   if(page==='staff') renderStaff();
+  if(page==='surgery') renderSurgList();
+  if(page==='reports') renderReports();
 }
 
 // ══════════════════════════════════════
@@ -1180,7 +1425,15 @@ function initApp(){
   document.getElementById('naDate').value=now.toISOString().split('T')[0];
   document.getElementById('invDate').value=now.toISOString().split('T')[0];
   document.getElementById('rxDate').value=now.toISOString().split('T')[0];
+  const sd=document.getElementById('surgDate');if(sd)sd.value=now.toISOString().split('T')[0];
+  const ld=document.getElementById('labDate');if(ld)ld.value=now.toISOString().split('T')[0];
   updateStats();
+  renderDashRevMini();
+  renderDashSurg();
+  applyI18n();
+  // Restore dark mode preference
+  if(localStorage.getItem('oa-dark')==='1') { document.body.classList.add('dark'); updateDarkIcon(); }
+  if(localStorage.getItem('oa-lang')==='ar') setLang('ar',true);
   // Firebase: try to load data
   if(window._FB&&window._FB.FB_READY) loadFromFirebase();
 }
@@ -1442,6 +1695,53 @@ function renderDTab(tab,p){
             <div class="rx-actions"><button class="bil-print" onclick="printRx('${rx.id}')">Print Rx</button></div>
           </div>
         </div>`).join(''):'<p style="font-size:.78rem;color:var(--muted)">No prescriptions on file.</p>'}
+    </div>`;
+  }
+  if(tab==='timeline'){
+    const evts=[
+      ...p.visits.map(v=>({date:`2026-${v.mon}-${v.day}`,type:'visit',label:v.type,body:v.note,color:'bl'})),
+      ...(p.notes||[]).map(n=>({date:n.date,type:'note',label:n.type,body:n.text.slice(0,100),color:'gr'})),
+      ...(p.labs||[]).map(l=>({date:l.date,type:'lab',label:l.name,body:`${l.vals.length} values`,color:'pu'})),
+    ].sort((a,b)=>b.date.localeCompare(a.date));
+    body.innerHTML=`<div class="dp-tab active">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:.83rem;font-weight:500;color:var(--navy)" class="text-head">Medical Timeline (${evts.length} events)</div>
+      </div>
+      <div class="timeline">
+        ${evts.length?evts.map(e=>`
+          <div class="tl-item">
+            <div class="tl-dot ${e.color}"></div>
+            <div class="tl-date">${e.date}</div>
+            <div class="tl-title">${e.label}</div>
+            <div class="tl-body">${e.body}</div>
+            <span class="tl-tag">${cap(e.type)}</span>
+          </div>`).join(''):'<p style="font-size:.78rem;color:var(--muted)">No history yet.</p>'}
+      </div>
+    </div>`;
+  }
+  if(tab==='labs'){
+    const pLabs=(p.labs||[]);
+    body.innerHTML=`<div class="dp-tab active">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:.83rem;font-weight:500;color:var(--navy)" class="text-head">Lab Results (${pLabs.length})</div>
+        <button class="btn-add" style="padding:7px 13px;font-size:.75rem" onclick="openLabFor('${p.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Result</button>
+      </div>
+      ${pLabs.length?pLabs.map(l=>`
+        <div class="lab-item">
+          <div class="lab-hd">
+            <div class="lab-name">${l.name}</div>
+            <div class="lab-date">${l.date}</div>
+          </div>
+          <div class="lab-results">
+            ${(l.vals||[]).map(vl=>`
+              <div class="lab-val">
+                <div class="lab-val-name">${vl.n}</div>
+                <div class="lab-val-num ${vl.flag?'lab-flag':''}">${vl.v} ${vl.u||''}</div>
+                <div class="lab-val-ref">${vl.ref?'Ref: '+vl.ref:''}</div>
+              </div>`).join('')}
+          </div>
+          ${l.notes?`<div style="font-size:.74rem;color:var(--muted);margin-top:8px;font-style:italic">${l.notes}</div>`:''}
+        </div>`).join(''):'<p style="font-size:.78rem;color:var(--muted)">No lab results on file.</p>'}
     </div>`;
   }
   if(tab==='billing'){
@@ -1882,15 +2182,7 @@ function genAIResp(msg,pat,mode){
 // ══════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════
-function populateSels(){
-  ['naPat','invPat','rxPat','aiPat'].forEach(selId=>{
-    const sel=document.getElementById(selId);if(!sel)return;
-    const cur=sel.value,first=sel.options[0];
-    sel.innerHTML='';sel.appendChild(first);
-    PATIENTS.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;sel.appendChild(o);});
-    if(cur) sel.value=cur;
-  });
-}
+// populateSels() defined below with surgery selector
 function openModal(id){document.getElementById(id).classList.add('show');}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 function v(id){const el=document.getElementById(id);return el?el.value:'';}
@@ -1907,8 +2199,413 @@ document.getElementById('gSearch').addEventListener('input',function(){
   if(this.value.trim()){navigate('patients');document.getElementById('patSearch').value=this.value;filterPats(this.value);}
 });
 window.addEventListener('resize',()=>{if(document.getElementById('page-appointments').classList.contains('active'))renderWeek();});
-// Close modals on overlay click
 document.querySelectorAll('.mo').forEach(mo=>mo.addEventListener('click',e=>{if(e.target===mo)mo.classList.remove('show');}));
+
+// ══════════════════════════════════════
+//  DARK MODE
+// ══════════════════════════════════════
+function toggleDark(){
+  document.body.classList.toggle('dark');
+  localStorage.setItem('oa-dark', document.body.classList.contains('dark')?'1':'0');
+  updateDarkIcon();
+}
+function updateDarkIcon(){
+  const dark = document.body.classList.contains('dark');
+  document.getElementById('darkIcon').innerHTML = dark
+    ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
+    : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+}
+
+// ══════════════════════════════════════
+//  INTERNATIONALISATION (EN ⇄ AR)
+// ══════════════════════════════════════
+const I18N = {
+  en: {
+    dashboard:'Dashboard', patients:'Patients', appointments:'Appointments',
+    surgery:'Surgery Schedule', prescriptions:'Prescriptions', billing:'Billing & Invoices',
+    reports:'Revenue Reports', reminders:'WhatsApp Reminders', staff:'Staff & Accounts',
+    newSurgery:'New Surgery', export:'Export CSV', info:'Info', timeline:'Timeline',
+    notes:'Notes', labs:'Labs', imaging:'Imaging', rx:'Rx',
+    recentActivity:'Recent Activity', revenueThisMonth:'Revenue This Month',
+    monthlyRevenue:'Monthly Revenue (EGP)', invoiceStatus:'Invoice Status',
+    topServices:'Top Services', reportsSub:'Monthly financial overview — EGP & USD',
+    searchPlaceholder:'Search patients…', signIn:'Sign In',
+    activePatients:'Active Patients', todaysAppts:"Today's Appts",
+    unpaidInvoices:'Unpaid Invoices', prescriptionsToday:'Prescriptions Today'
+  },
+  ar: {
+    dashboard:'لوحة التحكم', patients:'المرضى', appointments:'المواعيد',
+    surgery:'جدول العمليات', prescriptions:'الوصفات الطبية', billing:'الفواتير',
+    reports:'تقارير الإيرادات', reminders:'تذكيرات واتساب', staff:'فريق العمل',
+    newSurgery:'عملية جديدة', export:'تصدير CSV', info:'المعلومات', timeline:'التاريخ',
+    notes:'الملاحظات', labs:'نتائج المختبر', imaging:'الأشعة', rx:'الوصفة',
+    recentActivity:'النشاط الأخير', revenueThisMonth:'إيرادات الشهر',
+    monthlyRevenue:'الإيرادات الشهرية (جنيه)', invoiceStatus:'حالة الفواتير',
+    topServices:'أبرز الخدمات', reportsSub:'نظرة مالية شهرية — جنيه مصري وأمريكي',
+    searchPlaceholder:'بحث عن مريض…', signIn:'تسجيل الدخول',
+    activePatients:'المرضى النشطون', todaysAppts:'مواعيد اليوم',
+    unpaidInvoices:'فواتير غير مدفوعة', prescriptionsToday:'وصفات اليوم'
+  }
+};
+let currentLang = 'en';
+function setLang(lang, silent=false){
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  const isAR = lang === 'ar';
+  document.body.classList.toggle('rtl', isAR);
+  document.getElementById('btnEN').classList.toggle('active', !isAR);
+  document.getElementById('btnAR').classList.toggle('active', isAR);
+  localStorage.setItem('oa-lang', lang);
+  applyI18n();
+  // Update search placeholder
+  const gs = document.getElementById('gSearch');
+  if(gs) gs.placeholder = I18N[lang].searchPlaceholder;
+  if(!silent) showToast(isAR ? 'تم التبديل إلى العربية' : 'Switched to English');
+}
+function applyI18n(){
+  const t = I18N[currentLang];
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.dataset.i18n;
+    if(t[key]) el.textContent = t[key];
+  });
+  // Update stat card labels
+  const labels = {
+    sPats: t.activePatients, sToday: t.todaysAppts,
+    sBill: t.unpaidInvoices, sRx: t.prescriptionsToday
+  };
+  Object.entries(labels).forEach(([id, val])=>{
+    const el = document.getElementById(id);
+    if(el) {
+      const sl = el.parentElement?.querySelector('.sl');
+      if(sl && val) sl.textContent = val;
+    }
+  });
+  // Update page title if currently showing
+  const activePage = document.querySelector('.ni.active')?.dataset?.page;
+  if(activePage) document.getElementById('tbTitle').textContent = (t[activePage])||TITLES[activePage]||activePage;
+  // Rebuild sidebar nav labels
+  buildNav();
+}
+function t(key){ return I18N[currentLang][key] || I18N.en[key] || key; }
+
+// ══════════════════════════════════════
+//  SURGERY
+// ══════════════════════════════════════
+let SURGERIES = [
+  {id:'SG-001',patientId:'PT-004',patient:'Ahmed Al-Rashidi',procedure:'Total Knee Replacement (Right)',date:'2026-02-27',time:'07:30',room:'OR-1',duration:'3h',surgeon:'Dr. Ahmed Hassan',team:'Dr. Salma, Nurse Rania',status:'scheduled',preop:'Blood work done. ECG normal. Patient NBM from midnight. Consent signed.',postop:'',checklist:[{label:'Consent signed',done:true},{label:'Blood work',done:true},{label:'ECG',done:true},{label:'Anaesthesia review',done:true},{label:'Mark surgical site',done:false},{label:'IV access',done:false}]},
+  {id:'SG-002',patientId:'PT-003',patient:'Nadia Khoury',procedure:'Arthroscopic Rotator Cuff Repair (Left)',date:'2026-03-03',time:'09:00',room:'OR-2',duration:'2h',surgeon:'Dr. Ahmed Hassan',team:'Dr. Tarek, Nurse Hana',status:'scheduled',preop:'MRI reviewed. Partial supraspinatus tear confirmed. Beach-chair position planned.',postop:'',checklist:[{label:'Consent signed',done:true},{label:'MRI reviewed',done:true},{label:'Anaesthesia review',done:false},{label:'Mark surgical site',done:false},{label:'IV access',done:false}]},
+  {id:'SG-003',patientId:'PT-006',patient:'Omar Mansour',procedure:'Laminectomy L3–L5',date:'2026-03-10',time:'08:00',room:'OR-1',duration:'4h',surgeon:'Dr. Ahmed Hassan',team:'Dr. Khalid, Nurse Sara',status:'scheduled',preop:'MRI confirms severe stenosis. Prone position. Neuromonitoring planned.',postop:'',checklist:[{label:'Consent signed',done:true},{label:'MRI reviewed',done:true},{label:'Neuromonitoring arranged',done:false},{label:'Anaesthesia review',done:false},{label:'IV access',done:false}]},
+];
+
+function renderSurgList(){
+  const el=document.getElementById('surgList');if(!el)return;
+  document.getElementById('surgSub').textContent=`${SURGERIES.length} surgeries — ${SURGERIES.filter(s=>s.status==='scheduled').length} upcoming`;
+  el.innerHTML = SURGERIES.length ? SURGERIES.map(s=>`
+    <div class="surg-card">
+      <div class="surg-hd">
+        <div>
+          <div class="surg-title">${s.procedure}</div>
+          <div class="surg-meta">${s.patient} · ${s.date} at ${s.time}</div>
+        </div>
+        <div style="display:flex;gap:7px;align-items:center;flex-shrink:0">
+          <span class="surg-status ss-${s.status}">${statusLabel(s.status)}</span>
+          <button class="exp-btn" style="padding:5px 10px;font-size:.7rem" onclick="openEditSurg('${s.id}')">Edit</button>
+        </div>
+      </div>
+      <div class="surg-grid">
+        <div class="surg-field"><label>${t('room')||'Theatre'}</label><p>${s.room}</p></div>
+        <div class="surg-field"><label>${t('duration')||'Duration'}</label><p>${s.duration}</p></div>
+        <div class="surg-field"><label>${t('surgeon')||'Surgeon'}</label><p>${s.surgeon}</p></div>
+        <div class="surg-field" style="grid-column:1/-1"><label>${t('team')||'Assisting Team'}</label><p>${s.team}</p></div>
+      </div>
+      ${s.checklist&&s.checklist.length?`
+      <div class="surg-checklist">
+        <div class="surg-checklist-title">Pre-op Checklist (${s.checklist.filter(x=>x.done).length}/${s.checklist.length})</div>
+        ${s.checklist.map((ch,ci)=>`
+          <label class="chk-item">
+            <input type="checkbox" ${ch.done?'checked':''} onchange="toggleChk('${s.id}',${ci},this.checked)"/>
+            <span>${ch.label}</span>
+          </label>`).join('')}
+      </div>`:''}
+      ${s.preop?`<div style="margin-bottom:8px"><div style="font-size:.67rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:3px">Pre-op Notes</div><div style="font-size:.78rem;color:var(--text);line-height:1.6">${s.preop}</div></div>`:''}
+      ${s.postop?`<div><div style="font-size:.67rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:3px">Post-op Notes</div><div style="font-size:.78rem;color:var(--text);line-height:1.6">${s.postop}</div></div>`:''}
+      <div class="surg-actions">
+        <button class="bil-view" onclick="openPat('${s.patientId}')">Patient Record</button>
+        <button class="wa-btn" style="width:auto;padding:5px 11px;font-size:.72rem;margin:0" onclick="sendSurgWA('${s.id}')">WA Reminder</button>
+        <button class="btn-danger" style="padding:5px 11px;font-size:.72rem" onclick="deleteSurg('${s.id}')">Delete</button>
+      </div>
+    </div>`).join('')
+    : '<p style="color:var(--muted);font-size:.82rem;padding:12px 0">No surgeries scheduled.</p>';
+}
+function statusLabel(s){
+  return{scheduled:'Scheduled',inprogress:'In Progress',completed:'Completed',cancelled:'Cancelled'}[s]||cap(s);
+}
+function toggleChk(sid,ci,val){
+  const s=SURGERIES.find(x=>x.id===sid);if(!s)return;
+  s.checklist[ci].done=val;
+  saveToFirebase('surgeries',sid,s);
+  renderSurgList();
+}
+function openNewSurg(){
+  document.getElementById('surgModalTi').textContent='New Surgery';
+  document.getElementById('eSurgId').value='';
+  ['surgProc','surgRoom','surgSurgeon','surgTeam','surgPreop','surgPostop'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('surgPat').value='';
+  document.getElementById('surgDur').value='2h';
+  document.getElementById('surgStatus').value='scheduled';
+  openModal('surgModal');
+}
+function openEditSurg(id){
+  const s=SURGERIES.find(x=>x.id===id);if(!s)return;
+  document.getElementById('surgModalTi').textContent='Edit Surgery';
+  document.getElementById('eSurgId').value=id;
+  document.getElementById('surgPat').value=s.patientId;
+  document.getElementById('surgProc').value=s.procedure;
+  document.getElementById('surgDate').value=s.date;
+  document.getElementById('surgTime').value=s.time;
+  document.getElementById('surgRoom').value=s.room;
+  document.getElementById('surgDur').value=s.duration;
+  document.getElementById('surgSurgeon').value=s.surgeon;
+  document.getElementById('surgTeam').value=s.team;
+  document.getElementById('surgStatus').value=s.status;
+  document.getElementById('surgPreop').value=s.preop||'';
+  document.getElementById('surgPostop').value=s.postop||'';
+  openModal('surgModal');
+}
+function saveSurg(){
+  const eid=v('eSurgId');
+  const pid=v('surgPat'),proc=v('surgProc').trim();
+  if(!pid||!proc){showToast('Fill required fields');return;}
+  const pat=PATIENTS.find(p=>p.id===pid);
+  const data={patientId:pid,patient:pat.name,procedure:proc,date:v('surgDate'),time:v('surgTime'),room:v('surgRoom'),duration:v('surgDur'),surgeon:v('surgSurgeon'),team:v('surgTeam'),status:v('surgStatus'),preop:v('surgPreop'),postop:v('surgPostop')};
+  if(eid){
+    const s=SURGERIES.find(x=>x.id===eid);
+    Object.assign(s,data);
+    saveToFirebase('surgeries',eid,s);
+    showToast('Surgery updated');
+  }else{
+    const id='SG-'+String(SURGERIES.length+1).padStart(3,'0');
+    const s={...data,id,checklist:[
+      {label:'Consent signed',done:false},{label:'Blood work',done:false},
+      {label:'Anaesthesia review',done:false},{label:'Mark surgical site',done:false},{label:'IV access',done:false}
+    ]};
+    SURGERIES.push(s);
+    saveToFirebase('surgeries',id,s);
+    showToast('Surgery scheduled: '+proc);
+  }
+  closeModal('surgModal');
+  renderSurgList();
+}
+function deleteSurg(id){
+  SURGERIES=SURGERIES.filter(s=>s.id!==id);
+  deleteFromFirebase('surgeries',id);
+  renderSurgList();
+  showToast('Surgery removed');
+}
+function sendSurgWA(id){
+  const s=SURGERIES.find(x=>x.id===id);if(!s)return;
+  const pat=PATIENTS.find(p=>p.id===s.patientId);
+  const phone=(pat?.phone||'').replace(/\D/g,'');
+  const msg=`Dear ${s.patient.split(' ')[0]}, reminder: your surgery "${s.procedure}" is scheduled for ${s.date} at ${s.time} in ${s.room}. Please arrive 1 hour early. — OrthoAssist`;
+  if(phone) window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
+  else showToast('No phone number on file');
+}
+
+// ══════════════════════════════════════
+//  LAB RESULTS
+// ══════════════════════════════════════
+let labValRows=0;
+function openLabFor(pid){
+  document.getElementById('eLabPid').value=pid;
+  document.getElementById('labName').value='';
+  document.getElementById('labNotes').value='';
+  document.getElementById('labValsList').innerHTML='';
+  labValRows=0;
+  addLabValRow();addLabValRow();addLabValRow();
+  openModal('labModal');
+}
+function addLabValRow(){
+  labValRows++;
+  const div=document.createElement('div');
+  div.id=`lvr${labValRows}`;
+  div.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:7px;margin-bottom:7px;align-items:center';
+  div.innerHTML=`
+    <input type="text" id="lvn${labValRows}" placeholder="Test name (e.g. Hb)" style="padding:7px 9px;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:'DM Sans',sans-serif;background:var(--ice2);outline:none;color:var(--text)"/>
+    <input type="text" id="lvv${labValRows}" placeholder="Value" style="padding:7px 9px;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:'DM Sans',sans-serif;background:var(--ice2);outline:none;color:var(--text)"/>
+    <input type="text" id="lvu${labValRows}" placeholder="Unit" style="padding:7px 9px;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:'DM Sans',sans-serif;background:var(--ice2);outline:none;color:var(--text)"/>
+    <input type="text" id="lvr2${labValRows}" placeholder="Ref range" style="padding:7px 9px;border:1.5px solid var(--border);border-radius:7px;font-size:.78rem;font-family:'DM Sans',sans-serif;background:var(--ice2);outline:none;color:var(--text)"/>
+    <button onclick="document.getElementById('lvr${labValRows}').remove()" style="background:none;border:none;cursor:pointer;color:var(--error);font-size:1rem;padding:0 4px">✕</button>`;
+  document.getElementById('labValsList').appendChild(div);
+}
+function saveLab(){
+  const pid=document.getElementById('eLabPid').value;
+  const name=v('labName').trim();
+  if(!pid||!name){showToast('Fill required fields');return;}
+  const vals=[];
+  document.querySelectorAll('[id^="lvr"]:not([id^="lvr2"])').forEach(row=>{
+    const n=row.id.replace('lvr','');
+    const vn=v(`lvn${n}`);
+    if(vn) vals.push({n:vn,v:v(`lvv${n}`),u:v(`lvu${n}`),ref:v(`lvr2${n}`),flag:false});
+  });
+  if(!vals.length){showToast('Add at least one value');return;}
+  const p=PATIENTS.find(x=>x.id===pid);if(!p)return;
+  if(!p.labs) p.labs=[];
+  p.labs.unshift({name,date:v('labDate'),vals,notes:v('labNotes')});
+  saveToFirebase('patients',pid,p);
+  closeModal('labModal');
+  renderDTab('labs',p);
+  showToast('Lab result saved');
+}
+
+// ══════════════════════════════════════
+//  REPORTS
+// ══════════════════════════════════════
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function getMonthlyRevenue(){
+  const map={};
+  INVOICES.forEach(inv=>{
+    const m=inv.date?inv.date.slice(0,7):'2026-02';
+    map[m]=(map[m]||0)+Number(inv.egp||0);
+  });
+  // Generate last 6 months
+  const now=new Date('2026-02-25');
+  return Array.from({length:6},(_,i)=>{
+    const d=new Date(now);d.setMonth(d.getMonth()-5+i);
+    const key=d.toISOString().slice(0,7);
+    return{label:MONTHS[d.getMonth()],val:map[key]||0,key};
+  });
+}
+function renderReports(){
+  const monthly=getMonthlyRevenue();
+  const totalEGP=INVOICES.reduce((s,i)=>s+Number(i.egp||0),0);
+  const totalUSD=(totalEGP*0.0203).toFixed(2);
+  const paid=INVOICES.filter(i=>i.status==='paid').length;
+  const unpaid=INVOICES.filter(i=>i.status==='unpaid').length;
+  const partial=INVOICES.filter(i=>i.status==='partial').length;
+
+  // Revenue cards
+  document.getElementById('revCards').innerHTML=`
+    <div class="rev-card egp"><div class="rev-label">Total Revenue (EGP)</div><div class="rev-val">EGP ${totalEGP.toLocaleString()}</div><div class="rev-sub">${INVOICES.length} invoices</div></div>
+    <div class="rev-card usd"><div class="rev-label">Total Revenue (USD)</div><div class="rev-val">$${totalUSD}</div><div class="rev-sub">At 0.0203 rate</div></div>
+    <div class="rev-card cnt"><div class="rev-label">Paid Invoices</div><div class="rev-val">${paid}</div><div class="rev-sub">${INVOICES.length} total</div></div>
+    <div class="rev-card unp"><div class="rev-label">Outstanding</div><div class="rev-val">${unpaid+partial}</div><div class="rev-sub">Unpaid + partial</div></div>`;
+
+  // Bar chart
+  const max=Math.max(...monthly.map(m=>m.val),1);
+  document.getElementById('barChart').innerHTML=monthly.map(m=>`
+    <div class="bar-col">
+      <div class="bar" style="height:${Math.max((m.val/max)*130,4)}px;width:100%;background:linear-gradient(to top,var(--blue),var(--sky))" data-val="EGP ${m.val.toLocaleString()}"></div>
+    </div>`).join('');
+  document.getElementById('barLabels').innerHTML=`<div style="display:flex;gap:8px;width:100%">${monthly.map(m=>`<div class="bar-lbl" style="flex:1">${m.label}</div>`).join('')}</div>`;
+
+  // Pie chart (SVG)
+  const total2=paid+unpaid+partial||1;
+  const paidPct=paid/total2, unpPct=unpaid/total2, parPct=partial/total2;
+  function slice(start,size,color,r=60){
+    if(size<=0)return'';
+    const a1=start*2*Math.PI-Math.PI/2, a2=(start+size)*2*Math.PI-Math.PI/2;
+    const x1=70+r*Math.cos(a1),y1=70+r*Math.sin(a1);
+    const x2=70+r*Math.cos(a2),y2=70+r*Math.sin(a2);
+    const large=size>.5?1:0;
+    return`<path d="M70,70 L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z" fill="${color}" opacity="0.85"/>`;
+  }
+  document.getElementById('pieChart').innerHTML=`
+    <svg width="140" height="140" viewBox="0 0 140 140">
+      ${slice(0,paidPct,'#2e9e6b')}
+      ${slice(paidPct,unpPct,'#d64045')}
+      ${slice(paidPct+unpPct,parPct,'#e8930a')}
+      <circle cx="70" cy="70" r="35" fill="var(--bg-card,#fff)"/>
+      <text x="70" y="74" text-anchor="middle" font-size="11" font-family="'DM Sans',sans-serif" fill="var(--text)">${INVOICES.length} inv</text>
+    </svg>
+    <div class="pie-legend">
+      <div class="pie-leg-item"><div class="pie-dot" style="background:#2e9e6b"></div>Paid (${paid})</div>
+      <div class="pie-leg-item"><div class="pie-dot" style="background:#d64045"></div>Unpaid (${unpaid})</div>
+      <div class="pie-leg-item"><div class="pie-dot" style="background:#e8930a"></div>Partial (${partial})</div>
+    </div>`;
+
+  // Top services
+  const svcMap={};
+  INVOICES.forEach(i=>{const k=i.service||'Other';svcMap[k]=(svcMap[k]||0)+Number(i.egp||0);});
+  const topSvcs=Object.entries(svcMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxSvc=topSvcs[0]?.[1]||1;
+  document.getElementById('topServices').innerHTML=topSvcs.map(([svc,amt])=>`
+    <div style="margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--text);margin-bottom:3px"><span>${svc}</span><span style="font-weight:600">EGP ${amt.toLocaleString()}</span></div>
+      <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${(amt/maxSvc)*100}%;background:linear-gradient(90deg,var(--blue),var(--sky));border-radius:3px"></div></div>
+    </div>`).join('');
+}
+function renderDashSurg(){
+  const el=document.getElementById('dashSurgList');if(!el)return;
+  const upcoming=SURGERIES.filter(s=>s.status==='scheduled').sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
+  el.innerHTML=upcoming.length?upcoming.map(s=>{
+    const d=new Date(s.date);
+    return`<div class="sgi">
+      <div class="sgd"><div class="sgdd">${d.getDate()}</div><div class="sgdm">${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}</div></div>
+      <div style="flex:1"><div style="font-size:.8rem;font-weight:500;color:var(--text)">${s.patient}</div><div style="font-size:.71rem;color:var(--muted)">${s.procedure.length>35?s.procedure.slice(0,35)+'…':s.procedure}</div></div>
+      <div style="font-size:.7rem;color:var(--muted)">${s.time}</div>
+    </div>`;
+  }).join(''):'<div style="font-size:.78rem;color:var(--muted);padding:6px 0">No upcoming surgeries.</div>';
+}
+
+function renderDashRevMini(){
+  const monthly=getMonthlyRevenue();
+  const curMonth=monthly[monthly.length-1];
+  const prevMonth=monthly[monthly.length-2]||{val:0};
+  const el=document.getElementById('dashRevVal');
+  const sub=document.getElementById('dashRevSub');
+  const mc=document.getElementById('miniBarChart');
+  const ml=document.getElementById('miniBarLabels');
+  if(el) el.textContent=`EGP ${curMonth.val.toLocaleString()}`;
+  if(sub){
+    const diff=curMonth.val-prevMonth.val;
+    sub.textContent=diff>=0?`↑ EGP ${diff.toLocaleString()} vs last month`:`↓ EGP ${Math.abs(diff).toLocaleString()} vs last month`;
+    sub.style.color=diff>=0?'var(--success)':'var(--error)';
+  }
+  const max=Math.max(...monthly.map(m=>m.val),1);
+  if(mc) mc.innerHTML=monthly.map(m=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div class="mini-bar" style="height:${Math.max((m.val/max)*52,4)}px;width:100%"></div></div>`).join('');
+  if(ml) ml.innerHTML=monthly.map(m=>`<div style="font-size:.57rem;color:var(--muted);flex:1;text-align:center">${m.label}</div>`).join('');
+}
+function exportRevCSV(){
+  const monthly=getMonthlyRevenue();
+  const rows=[['Month','Revenue EGP','Revenue USD'],...monthly.map(m=>[m.label,m.val,(m.val*0.0203).toFixed(2)])];
+  dlCSV(rows,'revenue_report.csv');
+  showToast('Revenue report exported');
+}
+
+// ══════════════════════════════════════
+//  SURGERY PATIENT SELECT
+// ══════════════════════════════════════
+function populateSels(){
+  ['naPat','invPat','rxPat','aiPat','surgPat'].forEach(selId=>{
+    const sel=document.getElementById(selId);if(!sel)return;
+    const cur=sel.value,first=sel.options[0];
+    sel.innerHTML='';sel.appendChild(first);
+    PATIENTS.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;sel.appendChild(o);});
+    if(cur) sel.value=cur;
+  });
+}
+
+// ══════════════════════════════════════
+//  ALSO LOAD SURGERIES FROM FIREBASE
+// ══════════════════════════════════════
+const _origLoadFromFirebase = typeof loadFromFirebase === 'function' ? loadFromFirebase : null;
+async function loadFromFirebase(){
+  if(!window._FB||!window._FB.FB_READY) return;
+  try{
+    const {db,collection,getDocs}=window._FB;
+    const snaps=await getDocs(collection(db,'patients'));
+    if(!snaps.empty){PATIENTS=[];snaps.forEach(d=>PATIENTS.push({...d.data(),id:d.id}));renderPGrid();updateStats();}
+    const isnaps=await getDocs(collection(db,'invoices'));
+    if(!isnaps.empty){INVOICES=[];isnaps.forEach(d=>INVOICES.push({...d.data(),id:d.id}));renderBilling();}
+    const rxsnaps=await getDocs(collection(db,'prescriptions'));
+    if(!rxsnaps.empty){PRESCRIPTIONS=[];rxsnaps.forEach(d=>PRESCRIPTIONS.push({...d.data(),id:d.id}));renderRxList();}
+    const ssnaps=await getDocs(collection(db,'surgeries'));
+    if(!ssnaps.empty){SURGERIES=[];ssnaps.forEach(d=>SURGERIES.push({...d.data(),id:d.id}));}
+    renderDashRevMini();
+    showToast('Data loaded from Firebase ✓');
+  }catch(e){console.warn('Firebase load:',e);}
+}
 </script>
 </body>
 </html>
+
