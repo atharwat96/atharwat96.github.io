@@ -708,6 +708,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text)}
             <button class="btn-add" onclick="openAddPat()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Patient</button>
           </div>
         </div>
+        <div class="fbar" id="groupManagementBar">
+  <div class="fsearch" style="max-width: 200px;">
+    <input type="text" id="newGroupName" placeholder="New Group Name...">
+  </div>
+  <button class="btn-add" onclick="createGroup()" style="padding: 7px 12px;">+ Add Group</button>
+  <div id="groupList" style="display: flex; gap: 5px; margin-left: 10px; overflow-x: auto;">
+    </div>
+</div>
         <div class="fbar">
           <div class="fsearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search…" id="patSearch" oninput="filterPats(this.value)"/></div>
           <button class="fbtn active" onclick="filterBy('all',this)">All</button>
