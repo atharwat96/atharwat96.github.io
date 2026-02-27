@@ -229,7 +229,7 @@
           <th onclick="sortBy('rft')">RFT</th>
           <th onclick="sortBy('abo')">ABO</th>
           <th onclick="sortBy('vir')">VIR</th>
-          <th onclick="sortBy('anastasia')">Anastasia</th>
+          <th onclick="sortBy('anesthesia')">Anesthesia</th>
           <th onclick="sortBy('skin')">Skin</th>
           <th onclick="sortBy('notes')">Notes</th>
           <th class="th-center">Actions</th>
@@ -248,7 +248,7 @@
           <th><input type="text" id="fil_rft"       placeholder="🔍" oninput="renderTable()"></th>
           <th><input type="text" id="fil_abo"       placeholder="🔍" oninput="renderTable()"></th>
           <th><input type="text" id="fil_vir"       placeholder="🔍" oninput="renderTable()"></th>
-          <th><input type="text" id="fil_anastasia"  placeholder="🔍" oninput="renderTable()"></th>
+          <th><input type="text" id="fil_anesthesia"  placeholder="🔍" oninput="renderTable()"></th>
           <th><input type="text" id="fil_skin"      placeholder="🔍" oninput="renderTable()"></th>
           <th><input type="text" id="fil_notes"     placeholder="🔍" oninput="renderTable()"></th>
           <th><input type="text" disabled></th>
@@ -326,8 +326,8 @@
         <input type="text" id="f_vir" placeholder="Negative / Positive">
       </div>
       <div class="form-group">
-        <label>Anastasia</label>
-        <input type="text" id="f_anastasia" placeholder="Approved / Refused">
+        <label>Anesthesia</label>
+        <input type="text" id="f_anesthesia" placeholder="Approved / Refused">
       </div>
       <div class="form-group">
         <label>Skin</label>
@@ -356,7 +356,7 @@
       <h3>📋 Steps to connect Google Sheets</h3>
       <ol class="steps">
         <li>Create a Google Spreadsheet with these headers in row 1:<br>
-          <strong>Room, Name, Age, Diagnosis, Decision, Hb, Plt, INR, LFT, RFT, ABO, VIR, Anastasia, Skin, Notes</strong></li>
+          <strong>Room, Name, Age, Diagnosis, Decision, Hb, Plt, INR, LFT, RFT, ABO, VIR, Anesthesia, Skin, Notes</strong></li>
         <li>Open <strong>Extensions → Apps Script</strong> and paste the code below, then save:</li>
       </ol>
       <div class="code-snippet">const SHEET_NAME = "Sheet1";
@@ -418,7 +418,7 @@ function doPost(e) {
   document.getElementById('sheetsUrl').value = sheetsUrl;
   if (sheetsUrl) updateSyncStatus(true);
 
-  const COLS = ['room','name','age','diagnosis','decision','hb','plt','inr','lft','rft','abo','vir','anastasia','skin','notes'];
+  const COLS = ['room','name','age','diagnosis','decision','hb','plt','inr','lft','rft','abo','vir','anesthesia','skin','notes'];
 
   // ── Render ───────────────────────────────────────────────────
   function renderTable() {
@@ -470,7 +470,7 @@ function doPost(e) {
           <td>${labBadge(p.rft)}</td>
           <td>${p.abo ? `<span class="badge badge-blue">${esc(p.abo)}</span>` : esc('')}</td>
           <td>${virBadge(p.vir)}</td>
-          <td>${esc(p.anastasia)}</td>
+          <td>${esc(p.anesthesia)}</td>
           <td>${esc(p.skin)}</td>
           <td style="max-width:200px;white-space:normal;font-size:0.78rem;color:var(--text-muted)">${esc(p.notes)}</td>
           <td class="td-center">
@@ -549,7 +549,7 @@ function doPost(e) {
   }
 
   // ── CRUD ─────────────────────────────────────────────────────
-  const FIELDS = ['room','name','age','diagnosis','decision','hb','plt','inr','lft','rft','abo','vir','anastasia','skin','notes'];
+  const FIELDS = ['room','name','age','diagnosis','decision','hb','plt','inr','lft','rft','abo','vir','anesthesia','skin','notes'];
 
   function openAddModal() {
     editingId = null;
@@ -607,7 +607,7 @@ function doPost(e) {
   function toSheetRow(p) {
     return { Room:p.room, Name:p.name, Age:p.age, Diagnosis:p.diagnosis, Decision:p.decision,
              Hb:p.hb, Plt:p.plt, INR:p.inr, LFT:p.lft, RFT:p.rft,
-             ABO:p.abo, VIR:p.vir, Anastasia:p.anastasia, Skin:p.skin, Notes:p.notes };
+             ABO:p.abo, VIR:p.vir, Anesthesia:p.anesthesia, Skin:p.skin, Notes:p.notes };
   }
 
   async function syncToSheets(action, rowData) {
@@ -632,7 +632,7 @@ function doPost(e) {
           diagnosis:row.Diagnosis||'', decision:row.Decision||'',
           hb:row.Hb||'', plt:row.Plt||'', inr:row.INR||'',
           lft:row.LFT||'', rft:row.RFT||'', abo:row.ABO||'',
-          vir:row.VIR||'', anastasia:row.Anastasia||'', skin:row.Skin||'', notes:row.Notes||''
+          vir:row.VIR||'', anesthesia:row.Anesthesia||'', skin:row.Skin||'', notes:row.Notes||''
         }));
         nextId = patients.length+1; localStorage.setItem('nextId',nextId);
         saveLocal(); renderTable(); updateLastSync();
