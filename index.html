@@ -162,6 +162,45 @@
 
   @media (max-width:768px) { .form-grid { grid-template-columns:1fr 1fr; } }
   @media (max-width:500px) { .form-grid { grid-template-columns:1fr; } .form-group.two-col { grid-column:span 1; } }
+
+  /* Print modal */
+  .print-options-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; }
+  .print-option-card { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:12px; padding:16px; cursor:pointer; transition:all 0.2s; text-align:center; }
+  .print-option-card:hover, .print-option-card.selected { border-color:var(--accent); background:rgba(37,99,235,0.1); }
+  .print-option-card .icon { font-size:2rem; margin-bottom:8px; }
+  .print-option-card h4 { font-size:0.9rem; font-weight:700; margin-bottom:4px; }
+  .print-option-card p  { font-size:0.74rem; color:var(--text-muted); }
+
+  /* Select mode in table */
+  .select-col { width:40px; text-align:center !important; }
+  input[type="checkbox"].row-check { width:16px; height:16px; cursor:pointer; accent-color:var(--accent); }
+
+  /* ── Print styles ── */
+  @media print {
+    * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    body { background:#0a1628 !important; color:#fff !important; zoom:100%; font-family:'Cairo',sans-serif; margin:0; }
+    body::before { display:none !important; }
+    .toast-container, header .header-actions, .stats-bar, .toolbar,
+    .filter-row, .actions-cell, .th-center:last-child, td:last-child,
+    .modal-overlay:not(#printPreviewModal) { display:none !important; }
+    .container { padding:12px 16px; max-width:100%; }
+    header { border-bottom:1px solid rgba(255,255,255,0.15) !important; padding:12px 0 10px; margin-bottom:14px; }
+    .table-wrapper { border-radius:0; overflow:visible; border:1px solid rgba(37,99,235,0.25); }
+    table { min-width:unset; width:100%; font-size:0.7rem; }
+    .header-row { background:rgba(37,99,235,0.4) !important; }
+    .header-row th { padding:8px 7px; font-size:0.62rem; color:#93c5fd !important; }
+    tbody tr { border-bottom:1px solid rgba(255,255,255,0.07) !important; }
+    tbody tr:hover { background:none !important; }
+    td { padding:7px; font-size:0.72rem; color:rgba(255,255,255,0.9) !important; }
+    .badge { padding:2px 7px; font-size:0.65rem; border-radius:12px; }
+    .badge-green { background:rgba(16,185,129,0.25) !important; color:#34d399 !important; }
+    .badge-red   { background:rgba(239,68,68,0.25)  !important; color:#f87171 !important; }
+    .badge-yellow{ background:rgba(245,158,11,0.25) !important; color:#fbbf24 !important; }
+    .badge-blue  { background:rgba(37,99,235,0.25)  !important; color:#60a5fa !important; }
+    .badge-gray  { background:rgba(255,255,255,0.12)!important; color:rgba(255,255,255,0.7)!important; }
+    .print-header-info { display:flex !important; justify-content:space-between; font-size:0.72rem; color:rgba(255,255,255,0.5); margin-bottom:10px; }
+    .select-col, thead th:first-child.select-col, tbody td:first-child.select-col { display:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -181,6 +220,7 @@
       </div>
       <button class="btn btn-ghost" onclick="openConfigModal()">⚙️ Google Sheets</button>
       <button class="btn btn-success" onclick="syncFromSheets()">🔄 Sync</button>
+      <button class="btn btn-ghost" onclick="openPrintModal()" title="Print / Save as PDF">🖨️ Print</button>
       <button class="btn btn-primary" onclick="openAddModal()">+ Add Patient</button>
     </div>
   </header>
@@ -212,11 +252,13 @@
     <button class="btn btn-ghost btn-sm" onclick="clearAllFilters()" title="Clear all filters">✕ Clear Filters</button>
   </div>
 
+  <div class="print-header-info" style="display:none" id="printHeaderInfo"></div>
   <div class="table-wrapper">
     <table id="patientTable">
       <thead>
         <!-- Column headers -->
         <tr class="header-row">
+          <th class="th-center select-col"><input type="checkbox" id="checkAll" onclick="toggleCheckAll(this)" title="Select all" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)"></th>
           <th onclick="sortBy('room')">Room</th>
           <th onclick="sortBy('name')">Name</th>
           <th onclick="sortBy('age')">Age</th>
@@ -236,6 +278,7 @@
         </tr>
         <!-- Per-column filter inputs -->
         <tr class="filter-row">
+          <th class="select-col"><input type="text" disabled></th>
           <th><input type="text" id="fil_room"      placeholder="🔍" oninput="renderTable()"></th>
           <th><input type="text" id="fil_name"      placeholder="🔍" oninput="renderTable()"></th>
           <th><input type="text" id="fil_age"       placeholder="🔍" oninput="renderTable()"></th>
@@ -410,6 +453,51 @@ function doPost(e) {
   </div>
 </div>
 
+<!-- Print Modal -->
+<div class="modal-overlay" id="printModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2 class="modal-title">🖨️ Print / Save as PDF</h2>
+      <button class="modal-close" onclick="closePrintModal()">✕</button>
+    </div>
+
+    <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:18px">Choose which patients to include and your preferred output method.</p>
+
+    <h3 style="font-size:0.8rem;font-weight:700;color:var(--accent-light);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Patients to include</h3>
+    <div class="print-options-grid" style="margin-bottom:20px">
+      <div class="print-option-card selected" id="optAll" onclick="selectPrintScope('all')">
+        <div class="icon">👥</div>
+        <h4>All Patients</h4>
+        <p>Print every record currently in the table</p>
+      </div>
+      <div class="print-option-card" id="optSelected" onclick="selectPrintScope('selected')">
+        <div class="icon">☑️</div>
+        <h4>Selected Patients</h4>
+        <p id="selectedCountLabel">0 rows checked in the table</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:0.8rem;font-weight:700;color:var(--accent-light);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Output format</h3>
+    <div class="print-options-grid">
+      <div class="print-option-card selected" id="optPrint" onclick="selectPrintMethod('print')">
+        <div class="icon">🖨️</div>
+        <h4>Print</h4>
+        <p>Send directly to your printer</p>
+      </div>
+      <div class="print-option-card" id="optPDF" onclick="selectPrintMethod('pdf')">
+        <div class="icon">📄</div>
+        <h4>Save as PDF</h4>
+        <p>Save to PDF via your browser's print dialog</p>
+      </div>
+    </div>
+
+    <div class="modal-footer" style="margin-top:22px">
+      <button class="btn btn-primary" onclick="executePrint()">🖨️ Continue</button>
+      <button class="btn btn-ghost"   onclick="closePrintModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ── State ────────────────────────────────────────────────────
   let patients  = JSON.parse(localStorage.getItem('patients')  || '[]');
@@ -461,7 +549,8 @@ function doPost(e) {
       empty.style.display = 'none';
       thead.style.display = '';
       tbody.innerHTML = filtered.map(p => `
-        <tr>
+        <tr data-id="${p.id}">
+          <td class="td-center select-col"><input type="checkbox" class="row-check" value="${p.id}" onchange="updateCheckAllState()"></td>
           <td class="room-cell">${esc(p.room)}</td>
           <td class="name-cell">${esc(p.name)}</td>
           <td>${esc(p.age)}</td>
@@ -684,7 +773,92 @@ function doPost(e) {
     o.addEventListener('click', e => { if(e.target===o) o.classList.remove('active'); });
   });
 
+  // ── Checkbox helpers ─────────────────────────────────────────
+  function toggleCheckAll(cb) {
+    document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+  }
+  function updateCheckAllState() {
+    const all     = document.querySelectorAll('.row-check');
+    const checked = document.querySelectorAll('.row-check:checked');
+    const ca = document.getElementById('checkAll');
+    if (ca) {
+      ca.checked       = all.length > 0 && checked.length === all.length;
+      ca.indeterminate = checked.length > 0 && checked.length < all.length;
+    }
+  }
+  function getCheckedIds() {
+    return [...document.querySelectorAll('.row-check:checked')].map(c => parseInt(c.value));
+  }
+
+  // ── Print / PDF ───────────────────────────────────────────────
+  let printScope  = 'all';
+  let printMethod = 'print';
+
+  function openPrintModal() {
+    const cnt = getCheckedIds().length;
+    document.getElementById('selectedCountLabel').textContent = cnt + ' row' + (cnt !== 1 ? 's' : '') + ' checked in the table';
+    selectPrintScope('all');
+    selectPrintMethod('print');
+    document.getElementById('printModal').classList.add('active');
+  }
+  function closePrintModal() { document.getElementById('printModal').classList.remove('active'); }
+
+  function selectPrintScope(v) {
+    printScope = v;
+    document.getElementById('optAll').classList.toggle('selected', v === 'all');
+    document.getElementById('optSelected').classList.toggle('selected', v === 'selected');
+  }
+  function selectPrintMethod(v) {
+    printMethod = v;
+    document.getElementById('optPrint').classList.toggle('selected', v === 'print');
+    document.getElementById('optPDF').classList.toggle('selected', v === 'pdf');
+  }
+
+  function executePrint() {
+    closePrintModal();
+
+    let toPrint;
+    if (printScope === 'selected') {
+      const ids = getCheckedIds();
+      if (!ids.length) { showToast('⚠️ No rows selected – tick checkboxes first', 'error'); return; }
+      toPrint = patients.filter(p => ids.includes(p.id));
+    } else {
+      toPrint = [...patients];
+    }
+
+    if (!toPrint.length) { showToast('⚠️ No patients to print', 'error'); return; }
+
+    // Show meta info strip
+    const now  = new Date().toLocaleString('en-GB');
+    const info = document.getElementById('printHeaderInfo');
+    info.innerHTML = `<span>Patient Data Management System</span><span>Printed: ${now} &nbsp;|&nbsp; ${toPrint.length} patient(s)</span>`;
+    info.style.display = 'flex';
+
+    // Hide rows not in print set
+    const tbody   = document.getElementById('tableBody');
+    const allRows = [...tbody.querySelectorAll('tr')];
+    const printIds = new Set(toPrint.map(p => p.id));
+    if (printScope === 'selected') {
+      allRows.forEach(tr => {
+        const id = parseInt(tr.getAttribute('data-id'));
+        tr.style.display = printIds.has(id) ? '' : 'none';
+      });
+    }
+
+    const oldTitle = document.title;
+    if (printMethod === 'pdf') document.title = 'Patient_Data_' + new Date().toISOString().slice(0,10);
+
+    window.print();
+
+    setTimeout(() => {
+      document.title = oldTitle;
+      info.style.display = 'none';
+      allRows.forEach(tr => tr.style.display = '');
+    }, 800);
+  }
+
   renderTable();
 </script>
 </body>
 </html>
+
